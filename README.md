@@ -8,7 +8,9 @@ Financal plots and analysis used by DHCD Finance team (Department of Housing and
 Uses internal city data available on Workday. Data is then downloaded to a local drive and analyze in the R software.
 
 Includes:
+
 Budget vs Actuals BBMR YTD 
+
 GL-Operating Actual Expenses YTD
 
 # How to use the github repository
