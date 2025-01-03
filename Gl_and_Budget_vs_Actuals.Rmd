@@ -1,0 +1,376 @@
+---
+title: "Gl_and_Budget_vs_Actuals"
+author: "Selenea Gibson"
+date: "2025-01-02"
+output: html_document
+---
+
+## Project Overview
+This markdown file will use the DHCD Finance dept documents that are for reporting expenditures and GL data. The data will 
+
+```{r libraries}
+# libraries
+library(r4OPI)
+library(dplyr)
+library(here)
+library(tidyverse)
+library(scales)
+library(DT)
+```
+
+## Data 
+Reading in the files for the data that will be used. 
+
+```{r data}
+gl_data <- readxl::read_xlsx(here("Data","GL-Operating Actual Expenses YTD 2024-12-19 13_03 EST.xlsx"))
+expenditures <- readxl::read_xlsx(here("Data", "Budget_vs_Actuals_-_BBMR YTD 2024-12-19.xlsx"))
+```
+
+## Cleaning the datasets
+I need to remove some of the rows that are not needed for the analysis. I will then make the new row be the header row. 
+
+*NOTE THERE IS A COLUMN NAMED NA- REMOVE THIS AS THERE IS NO DATA IN THIS COLUMN?* 
+
+```{r cleaningdata}
+# cleaning the gl_data dataset
+gl_data <- gl_data[-(1:12), ]
+
+# header number
+colnames(gl_data) <- gl_data[1, ]
+
+# remove the 1st row now
+gl_data <- gl_data[-1, ]
+
+# cleaning the expenditures dataset
+# header number
+colnames(expenditures) <- expenditures[1, ]
+
+# remove the 1st row now
+expenditures <- expenditures[-1, ]
+```
+
+## Join the reports 
+I want to join the reports together based on a unique ID. I will have to create my own unique ID because the column names and row numbers do not match. 
+Assigning the number to start at 1 for the id count. This will now allow for a proper join. 
+*NOTE I HAVE .1 AT THE END OF SOME OF THE DUPLICATE COLUMNS. WANT TO REMOVE AND HAVE TRIED BUT NOTHING WORKED TO DO SO.*
+
+```{r joins}
+# add synthetic row numbers
+gl_data$id <- 1:nrow(gl_data) 
+expenditures$id <- 1:nrow(expenditures)
+
+# join by this id
+merged_data <- merge(gl_data, expenditures, by = "id")
+
+# removing the suffixes of the .x and .y
+colnames(merged_data) <- gsub("\\.(x|y|\\d+)$", "", colnames(merged_data))
+```
+
+
+## Benchmarks
+Make a color coded marking for spends that are over budget or near the budget spending mark. There will be numerous benchmarks. This will occur at 80% spent amount. 
+
+Examples below
+
+```{r benchmarks}
+# make it numeric
+merged_data$`Total Spent` <- as.numeric(merged_data$`Total Spent`)
+
+# create the new column with 1 if the amount is greater than 80% of the total spend, 0 otherwise
+merged_data$over_80_percent <- ifelse(merged_data$Amount > 0.8 * merged_data$`Total Spent`, 1, 0)
+
+# create a new column that flags rows where total spend is negative
+merged_data$total_spend_negative <- ifelse(merged_data$'Total Spent' < 0, 1,0)
+```
+
+
+
+
+
+
+
+## Mapping and plots
+Making a map and a plot for the various data analysis. This can be altered to your liking and can include more data 
+
+```{r plot}
+# create a color column for plotting (orange if over 80%, default color otherwise)
+merged_data$color <- ifelse(merged_data$over_80_percent == 1, "orange", "black")
+
+# plot the data with color
+ggplot(merged_data, aes(x = ID, y = Amount, fill = color)) +
+  geom_bar(stat = "identity") +
+  scale_fill_identity() +
+  theme_minimal() +
+  labs(title = "Spending by ID",
+       x = "ID", 
+       y = "Amount")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Example code below
+
+# the code below will read a Payroll Expense Ledger report
+# from workday and create a summary excel file and a couple charts
+
+
+
+# these will load a couple additional R tools for the work
+# libraries are extra R tools
+library(tidyverse)
+library(scales)
+
+
+
+# this will read the excel file. The file needs to be in the same
+# folder as the R script. And the name in parenthesis needs to match
+# the file name of the excel file
+expenditure_data <-
+  readxl::read_xlsx("June Payroll Expense Ledger by Org Excel 2024-07-17 10_21 EDT.xlsx",
+                    skip = 8)
+
+
+
+
+# This part aggregates the transaction in the GL file by service
+# then sums the expenditures.
+
+service_exp <- expenditure_data |>
+  group_by(`Service (Cost Center Hierarchy)`) |>
+  summarise(total_expenditures = sum(`Ledger Amount ($)`)) |>
+  ungroup() |>
+  arrange(desc(total_expenditures))
+
+# you just created an object called "service_exp" which
+# can be seen be executing this
+print(service_exp)
+
+
+
+
+
+
+# This part aggregates the transaction in the GL file by cost center
+# then sums the expenditures.
+
+cost_center_exp <- expenditure_data |>
+  group_by(`Cost Center`) |>
+  summarise(total_expenditures = sum(`Ledger Amount ($)`)) |>
+  ungroup() |>
+  arrange(desc(total_expenditures))
+
+# you just created an object called "cost_center_exp" which
+# can be seen be executing this
+cost_center_exp
+
+
+# this part creates an excel file with the costcenter
+# and service expenditures
+
+writexl::write_xlsx(list(`expend by service` = service_exp,
+                         `expend by cost center` = cost_center_exp), "summarized_expenditures.xlsx")
+
+
+#####
+#####
+### these parts make charts
+#####
+#####
+
+
+# this part aggregates by date posted, summing
+# expenditures byt the day the posted to the GL
+
+daily_spend <- expenditure_data |>
+  mutate(day = floor_date(as.Date(`Accounting Date` ), "day")) |>
+  group_by(day) |>
+  summarise(total_expenditures = sum(`Ledger Amount ($)`)) |>
+  ungroup()
+
+print(daily_spend)
+
+
+### this part makes the chart
+
+daily_spend |>
+  ggplot(aes(day, total_expenditures))+
+  geom_col() +
+  theme_classic() +
+  scale_y_continuous(labels = unit_format(unit = "M", scale = 1e-6)) +
+  geom_hline(yintercept=0) +
+  labs(title = "DGS Posted Expenditures throughout the month of June 2024",
+       subtitle = "Expenditures by day",
+       y = "Expenditures ($)",
+       x = "Date posted on GL")
+
+### this part saves the chart
+ggsave("daily_spend.pdf",
+       width = 8, height = 5)
+
+
+
+## this part aggregates bby fund, summing
+## expenditures, then makes a chart
+
+expenditure_data |>
+  separate(Fund, into = c("number", "Fund"), extra = "merge", remove = T) |>
+  group_by(Fund) |>
+  summarise(total_spend = sum(`Ledger Amount ($)`)) |>
+  ggplot(aes(reorder(Fund, (total_spend)), total_spend)) +
+  geom_col(fill = "orange") +
+  theme_classic() +
+  coord_flip() +
+  scale_y_continuous(labels = unit_format(unit = "M", scale = 1e-6), expand = c(0, 0), limits = c(0,3000000))+
+  labs(title = "DGS Posted Expenditures by Fund",
+       subtitle = "Posted in June 2024",
+       y = "Expenditures ($)",
+       x = "")
+
+
+## this saves the chart as a pdf
+
+ggsave("spend_by_fund.pdf",
+       width = 8.5, height = 5)
+
+
+
+
+## this part filters transaction to the manual JEs
+### then aggregates by by fund summing the GL transactions
+## by the fund
+
+manual_change_data <- expenditure_data |>
+  filter(str_detect(`Journal Source`, "Manual")) |>
+  separate(Fund, into = c("number", "Fund"), extra = "merge", remove = T) |>
+  group_by(Fund) |>
+  summarise(total_spend = sum(`Ledger Amount ($)`))
+
+
+
+
+### this part makes the chart showing where the manual
+### GL's occur
+
+ggplot() +
+  geom_col(data = manual_change_data,
+           mapping = aes(reorder(`Fund`, (total_spend)), total_spend),
+           fill = "orange") +
+  geom_text(data = manual_change_data,
+            mapping = aes(reorder(`Fund`, (total_spend)), 0,
+                          label = scales::dollar(total_spend/1000000, suffix = "M")), hjust = -.2) +
+  theme_classic() +
+  geom_hline(yintercept=0) +
+  coord_flip() +
+  geom_text() +
+  scale_y_continuous(labels = unit_format(unit = "M", scale = 1e-6), expand = c(0, 0))+
+  labs(title = "Manual Accounting Adjustments",
+       subtitle = "Made in June 2024",
+       y = "Expenditures ($)",
+       x = "")
+
+
+## this saves the chart as a pdf
+ggsave("manual_adjustments_by_fund.pdf",
+       width = 8.5, height = 5)
+
