@@ -10,7 +10,6 @@ This markdown file will use the DHCD Finance dept documents that are for reporti
 
 ```{r libraries}
 # libraries
-library(r4OPI)
 library(dplyr)
 library(here)
 library(tidyverse)
@@ -19,23 +18,64 @@ library(DT)
 ```
 
 ## Data 
-Reading in the files for the data that will be used. 
+Reading in the files for the data that will be used. Put new data files in the "Data" folder and replace the file names below with the names of the new files.
 
 ```{r data}
 
+## change the names of these files
+
 GL_file_name <- "GL-Operating Actual Expenses YTD 2024-12-19 13_03 EST.xlsx"
 
-budget_vs_actuals_file_name <- "Budget_vs_Actuals_-_BBMR YTD 2024-12-19.xlsx"
+budg_vs_act_file_name <- "Budget_vs_Actuals_-_BBMR YTD 2024-12-19.xlsx"
+
+
+## 
+## read data from files
+
 
 gl_data <- readxl::read_xlsx(here("Data", GL_file_name), 
-                             skip = 13)
+                             skip = 13,
+                             col_types = c(rep("text",2),   
+                                           "date", 
+                                           rep("text",6),
+                                           rep("numeric", 3),
+                                           rep("text",26)))
 
 
+## the first row of the data file is mostly empty except for a few important
+##dates. Read those data and do some formatting
 
-file_headers <- readxl::read_xlsx(here("Data", budget_vs_actuals_file_name))
+first_row_of_data <- readxl::read_xlsx(here("Data", budg_vs_act_file_name)) |> 
+  names() 
+
+
+name_prefixes <- tibble(column_names) |> 
+  mutate(prefixes = ifelse(str_detect(file_headers, "\\.\\."), 
+                          NA_character_, 
+                          file_headers)) |> 
+fill(prefixes, .direction = "down") |> 
+  pull(prefixes)
+
+
+### read the data file again but skip the first line
 
 budg_vs_actuals <- readxl::read_xlsx(here("Data", budget_vs_actuals_file_name),
                   skip = 1)
+
+
+### the names in the file repeat themselves, but this combines the dates 
+### with the repetative names
+
+for(i in seq_along(name_prefixes)){
+  plain_name <- gsub("\\.\\..*","", names(budg_vs_actuals)[i]) 
+  
+  names(budg_vs_actuals)[i] <- 
+    ifelse(is.na(name_prefixes[i]) & str_length(plain_name) > 0,
+           plain_name,
+           paste(plain_name,name_prefixes[i], sep = "_"))
+}
+
+ names(budg_vs_actuals)
 
 ```
 
@@ -45,22 +85,101 @@ I need to remove some of the rows that are not needed for the analysis. I will t
 *NOTE THERE IS A COLUMN NAMED NA- REMOVE THIS AS THERE IS NO DATA IN THIS COLUMN?* 
 
 ```{r cleaningdata}
-# cleaning the gl_data dataset
-gl_data <- gl_data[-(1:12), ]
 
-# header number
-colnames(gl_data) <- gl_data[1, ]
 
-# remove the 1st row now
-gl_data <- gl_data[-1, ]
+## add round all expenditure days to the expenditure month
+gl_data <- gl_data |> 
+  mutate(expend_month = as.Date(floor_date(`Accounting Date` , unit = "month")))
 
-# cleaning the expenditures dataset
-# header number
-colnames(expenditures) <- expenditures[1, ]
 
-# remove the 1st row now
-expenditures <- expenditures[-1, ]
+### remove columns that have nulls for all values, replace "blank" with an actual 'null' value
+
+budg_vs_actuals <- budg_vs_actuals |> 
+  select_if(~sum(!is.na(.)) > 0) |> 
+  mutate(Grant = ifelse(Grant == "(Blank)", NA_character_, Grant))
+
+### create a dataframe of overall expenditures by worktags from the 
+### budget vs actuals file
+
+budg_vs_actuals_overall <- 
+  budg_vs_actuals |> 
+  select(-matches("_")) 
+
+### create a dataframe of monthly expenditures by worktags from the 
+### budget vs actuals file. Change the table from wide to long.
+
+budget_vs_Actuals_monthly <- 
+  budg_vs_actuals |> 
+  select(-matches("Budget|total",ignore.case = T)) |> 
+  pivot_longer(cols = -!matches("_"), names_to = "date_topic", values_to = "amounts") |> 
+  separate(date_topic, sep = "_", into = c("acct_category", "month")) |> mutate(month = as.Date(paste0(month,"-01")))
+
+
 ```
+
+
+
+### monthly amounts match
+
+check to see if the monthly expenditures for each categories match between the two files.
+
+
+```{r}
+
+### aggregate the ledger data by month and worktags
+monthly_spendies <- gl_data |> 
+  group_by(expend_month, Fund, `Cost Center`, Grant, 
+           `Spend Category as Worktag`) |> 
+  reframe(total_spend_on_gl = sum(Amount, na.rm = T))
+
+### compare between two files
+monthly_spendies_compared <- budget_vs_Actuals_monthly |> 
+  filter(acct_category == "Actuals") |> 
+  full_join(monthly_spendies, by = c("Cost Center"="Cost Center",
+                                     "Fund"="Fund",
+                                     "Grant" = "Grant",
+                                     "Spend Category" = "Spend Category as Worktag",
+                                     "month"="expend_month")) 
+
+### filter on those where values dont match
+mismatched_monthly_expenditures <- monthly_spendies_compared |> 
+  filter(round(amounts) != round(total_spend_on_gl) ) 
+
+
+message(scales::percent(nrow(mismatched_monthly_expenditures)/nrow(monthly_spendies_compared), accuracy = .1), " of rows are mismatched")
+
+
+```
+
+### overall expenditures
+
+check to see if the total expenditures for each category match between the two files.
+
+```{r}
+
+overall_spendies <- gl_data |> 
+  group_by(Fund, `Cost Center`, Grant, `Spend Category as Worktag`) |> 
+  reframe(total_spend_on_gl = sum(Amount, na.rm = T),
+          number_of_lines = n())
+
+
+overall_spendies_compared <- budg_vs_actuals_overall |> 
+    full_join(overall_spendies, by = c("Cost Center"="Cost Center",
+                                     "Fund"="Fund",
+                                     "Grant" = "Grant",
+                                     "Spend Category" = "Spend Category as Worktag")) 
+
+
+mismatched_overall_expenditures <- overall_spendies_compared |> 
+  filter(round(`Total Spent` ) != round(total_spend_on_gl) ) |> 
+  mutate_at(vars(matches("total", ignore.case = T)), scales::dollar)
+
+
+message(scales::percent(nrow(mismatched_overall_expenditures)/nrow(overall_spendies), accuracy = .1), " are mismatched")
+
+
+```
+
 
 ## Join the reports 
 I want to join the reports together based on a unique ID. I will have to create my own unique ID because the column names and row numbers do not match. 
@@ -68,15 +187,10 @@ Assigning the number to start at 1 for the id count. This will now allow for a p
 *NOTE I HAVE .1 AT THE END OF SOME OF THE DUPLICATE COLUMNS. WANT TO REMOVE AND HAVE TRIED BUT NOTHING WORKED TO DO SO.*
 
 ```{r joins}
-# add synthetic row numbers
-gl_data$id <- 1:nrow(gl_data) 
-expenditures$id <- 1:nrow(expenditures)
 
-# join by this id
-merged_data <- merge(gl_data, expenditures, by = "id")
 
-# removing the suffixes of the .x and .y
-colnames(merged_data) <- gsub("\\.(x|y|\\d+)$", "", colnames(merged_data))
+
+
 ```
 
 
