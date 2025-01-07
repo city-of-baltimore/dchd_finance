@@ -47,12 +47,15 @@ colnames(expenditures) <- expenditures[1, ]
 
 # remove the 1st row now
 expenditures <- expenditures[-1, ]
+
+# remove the NA name column
+#expenditures <- subset(expenditures, select = -NA)
 ```
 
 ## Join the reports 
 I want to join the reports together based on a unique ID. I will have to create my own unique ID because the column names and row numbers do not match. 
 Assigning the number to start at 1 for the id count. This will now allow for a proper join. 
-*NOTE I HAVE .1 AT THE END OF SOME OF THE DUPLICATE COLUMNS. WANT TO REMOVE AND HAVE TRIED BUT NOTHING WORKED TO DO SO.*
+*NOTE I HAVE .1 AT THE END OF SOME OF THE DUPLICATE COLUMNS.*
 
 ```{r joins}
 # add synthetic row numbers
@@ -83,27 +86,36 @@ merged_data$over_80_percent <- ifelse(merged_data$Amount > 0.8 * merged_data$`To
 merged_data$total_spend_negative <- ifelse(merged_data$'Total Spent' < 0, 1,0)
 ```
 
+## Color Indicators
+Using the identified thresholds I made a new column called Color that will assign the designated color to the specific operator. 
 
-
-
-
-
+```{r colorcolumn}
+# assigning colors to the Color column based on the assigned values
+merged_data$Color <- ifelse(
+  merged_data$total_spend_negative == 1, 
+  "Red", # Negative Total Spent
+  ifelse(
+    merged_data$over_80_percent == 1, 
+    "Orange", # Over 80% of Amount
+    "Green"   # Default
+  )
+)
+```
 
 ## Mapping and plots
 Making a map and a plot for the various data analysis. This can be altered to your liking and can include more data 
 
 ```{r plot}
-# create a color column for plotting (orange if over 80%, default color otherwise)
-merged_data$color <- ifelse(merged_data$over_80_percent == 1, "orange", "black")
+ggplot(merged_data, aes(x = merged_data$Amount, y = merged_data$`Total Spent`, color = Color)) +
+  geom_point(size = 3, alpha = 0.8) +
+  scale_color_manual(values = c("Red" = "red", "Orange" = "orange", "Green" = "green")) +
+  labs(
+    title = "Total Spent vs. Amount",
+    x = "Amount",
+    y = "Total Spent"
+  ) +
+  theme_minimal()
 
-# plot the data with color
-ggplot(merged_data, aes(x = ID, y = Amount, fill = color)) +
-  geom_bar(stat = "identity") +
-  scale_fill_identity() +
-  theme_minimal() +
-  labs(title = "Spending by ID",
-       x = "ID", 
-       y = "Amount")
 ```
 
 
