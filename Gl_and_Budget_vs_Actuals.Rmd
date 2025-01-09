@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ## Project Overview
-This markdown file will use the DHCD Finance dept documents that are for reporting expenditures and GL data. The data will 
+This markdown file will be used by the DHCD Finance department. The excel files that are read in come from Workday and are downloaded for analysis. The files pertain to BBMR Baltimore City expenditures and GL data. The data is read into R then an analysis is done so DHCD Finance team can complete their work. There are plots/figures that the team can use for reporting to customers and other agency mem bers that they interact with.  
 
 ```{r libraries}
 # libraries
@@ -69,11 +69,10 @@ merged_data <- merge(gl_data, expenditures, by = "id")
 colnames(merged_data) <- gsub("\\.(x|y|\\d+)$", "", colnames(merged_data))
 ```
 
-
 ## Benchmarks
 Make a color coded marking for spends that are over budget or near the budget spending mark. There will be numerous benchmarks. This will occur at 80% spent amount. 
 
-Examples below
+Examples below to mark the benchmarks for the datasets.
 
 ```{r benchmarks}
 # make it numeric
