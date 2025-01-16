@@ -158,7 +158,7 @@ message(scales::percent(nrow(mismatched_overall_expenditures)/nrow(overall_spend
 ```
 
 ## Making an output table
-This will create the table that can be used for `754 SFSP Expense Report`. Ideally we want to keep the pre-existing data but make placeholders for data that we do not currently have for specific months. What we can do is make placeholders for the data and then we can 
+This will create the table that can be used for `754 SFSP Expense Report`. Ideally we want to keep the pre-existing data but make placeholders for data that we do not currently have for specific months. What we can do is make placeholders for the data and then we can tweak it as we go.
 
 ```{r outputtable}
 # for now I am using the tot_actual cat - I cannot figure out where they are getting this total bud from
@@ -173,74 +173,213 @@ expense_report_tbl <- budg_vs_actuals |>
     Fund = Fund,
     'Cost Center Name' = `Cost Center`,
     'Spend Category' = `Spend Category`,
-    'Total Budget' = `Total Actuals`,
+    'Total Budget' = `Total Actuals`, # again this is a placeholder until I find the right column
     `Actuals_2024-07` = ifelse(is.na(`Actuals_2024-07`), "", `Actuals_2024-07`),
     `Actuals_2024-08` = ifelse(is.na(`Actuals_2024-08`), "", `Actuals_2024-08`),
     `Actuals_2024-09` = ifelse(is.na(`Actuals_2024-09`), "", `Actuals_2024-09`),
     `Actuals_2024-10` = ifelse(is.na(`Actuals_2024-10`), "", `Actuals_2024-10`),
     `Actuals_2024-11` = ifelse(is.na(`Actuals_2024-11`), "", `Actuals_2024-11`),
     `Actuals_2024-12` = ifelse(is.na(`Actuals_2024-12`), "", `Actuals_2024-12`),
-    # Add placeholders for missing months
-    `Actuals_2024-01` = "",
-    `Actuals_2024-02` = "",
-    `Actuals_2024-03` = "",
-    `Actuals_2024-04` = "",
-    `Actuals_2024-05` = "",
-    `Actuals_2024-06` = ""
   )
 
-# find which months already exist in the data (based on column names)
-existing_months <- colnames(expense_report_tbl) |> 
-  str_extract("(?<=Actuals_2024-)[0-9]{2}") |> 
-  as.numeric() |> 
-  na.omit() 
+# Apply transformations to the existing month columns
+expense_report_tbl <- expense_report_tbl %>%
+  mutate(across(
+    .cols = starts_with("Actuals_2024-"),  # Apply only to month columns
+    .fns = ~ ifelse(is.na(.), "", .),  # Replace NAs with empty string
+    .names = "{.col}"  # Keep original month names
+  ))
 
-# naming the columns by their respective month names. So this will take away the crazy names of the actuals.
-existing_month_names <- month.name[existing_months]
+# check it out and see how it looks
+print(expense_report_tbl)
 
-# identify the missing months (those that aren't in the existing data)
-missing_months <- setdiff(expected_months, existing_month_names)
-
-# preserve existing data, but for missing months, make them blank
+# rename the columns for easier reading
 expense_report_tbl <- expense_report_tbl |> 
-  reframe(
-    across(
-      .cols = all_of(existing_month_names),
-      .fns = ~ ifelse(is.na(.), "", .),
-      .names = "{.col}"  # Keep original month name
-    )
-  )
+  rename(July = `Actuals_2024-07`,
+         August = `Actuals_2024-08`,
+         September = `Actuals_2024-09`,
+         October = `Actuals_2024-10`,
+         November = `Actuals_2024-11`,
+         December = `Actuals_2024-12`)
 
-
-
-# find which months already exist in the data (based on column names)
-existing_months <- colnames(expense_report_tbl) |> 
-  str_extract("(?<=Actuals_2024-)([0-9]{2})") |>  # Use a non-capturing group for two digits
-  na.omit() |> 
-  as.numeric()  # Convert to numeric for comparison
-
-existing_month_names <- month.name[existing_months]
-# Identify missing months (those that aren't in the existing data)
-missing_months <- setdiff(expected_months, existing_month_names)
-
-# Create columns for existing months with blank strings for missing data
-df <- df |> 
+# create the GL YTD EXP column which is taking the previous month and dividing by the current month
+# change the date of the month in the divison for what the month pertains to so if it is 
+# aug then make it aug then do july/aug for the column. 
+expense_report_tbl <- expense_report_tbl |> 
   mutate(
-    across(
-      .cols = all_of(existing_month_names),
-      .fns = ~ ifelse(is.na(.), "", .),
-      .names = "{.col}"  # Use original month name
+    'GL YTD EXP' = ifelse(
+      !is.na(August & August!= 0 & !is.na(July) & July!= 0),  # Ensure non-zero and non-NA denominator and numerator
+      lag(August) / July,  # Perform division
+      NA  # Return NA if July or August is NA or zero
+    )
+  ) |> 
+  mutate(
+    'GL YTD EXP' = ifelse(
+      is.finite(`GL YTD EXP`),  # Check if the value is finite (not Inf or NaN)
+      round(`GL YTD EXP`, 2),   # Round to 2 decimal places to avoid exponential notation
+      ""  # Return NA for non-finite values
     )
   )
-
-# Add the missing months as blank columns (empty strings)
-for (month in missing_months) {
-  df[[month]] <- ""  # Add blank columns for missing months
-}
-
-print(df)
 ```
 
+###
+## Create the Excel workbook
+Now I will create the workbook that will be used to display the data that is seen on the `754 SFSP Expense Report`. 
+
+I am going to break it up in steps to follow it easier.
+
+1. I want to put all of the service data into a dataset that will have everything in it.
+2. I want to filter the data to only be focused on the Summer Food Service Program.
+3. I want to sort by the Fund column. 
+
+```{r filteringsumprogram}
+# group the data by Service Name and arrange by Spend Category
+all_expense_rep <- expense_report_tbl |> 
+  arrange(`Service Name`, `Spend Category`) |> 
+  select(c(`Service Name`,
+            Fund, 
+           `Cost Center Name`,
+           `Spend Category`, 
+           `Total Budget`,
+           July,
+           August,
+           September,
+           October,
+           November,
+           December,
+          `GL YTD EXP`))
+
+# filter to show the summer_food_program only have to put the full name into the filter
+summer_expense_rep <- all_expense_rep |> 
+  filter(`Service Name` == "SRV0754 Summer Food Service Program")
+
+# sort data and arrange by the Fund name to show the 1001 General Fund first
+summer_expense_rep <- summer_expense_rep |> 
+  arrange(Fund, `Service Name`, `Spend Category`)
+```
+
+4. Creating the workbook.
+There is a lot going on here. So what this section is doing is creating the workbook but in sections. 
+
+```{r workbook}
+# --- identifying the first row for the data ---
+
+# find the first row of "1001 General Fund", "5000 State Grants Fund", and the "CCA000347 Summer Food Service Program"
+first_row_sfp <- which(tolower(summer_expense_rep$`Service Name`) == tolower("SRV0754 Summer Food Service Program")) |> 
+  min()
+first_row_1001gf <- which(tolower(summer_expense_rep$Fund) == "1001 general fund") |>
+  min()
+first_row_5000sf <- which(tolower(summer_expense_rep$Fund) == "5000 state grants fund") |>
+  min()
+first_row_ccn <- which(tolower(summer_expense_rep$`Cost Center Name`) == tolower("CCA000347 Summer Food Service Program")) |> 
+  min()
+
+# --- create a workbook ---
+
+# add the worksheet to the created workbook
+wb <- createWorkbook()
+addWorksheet(wb, "Summer Expense Report")
+
+# --- add Title (Row 1) ---
+
+# add a header, style, and color with the label "Summer Analysis" in the first row
+writeData(wb, "Summer Expense Report", "FY 2024 Budget and Actual as of 07/31/2024", startRow = 1, startCol = 1)
+header_style <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#FFA500")
+mergeCells(wb, "Summer Expense Report", cols = 1:ncol(summer_expense_rep), rows = 1)
+addStyle(wb, "Summer Expense Report", header_style, rows = 1, cols = 1:ncol(summer_expense_rep), gridExpand = TRUE)
+
+# --- align for column headers ---
+
+# center alignment for column headers
+center_style <- createStyle(halign = "center", valign = "center")
+addStyle(wb, "Summer Expense Report", center_style, rows = 2, cols = 1:ncol(summer_expense_rep), gridExpand = TRUE)
+
+# --- identify after first appearance ---
+
+# reset "Service Name", "Fund", and "Cost Center Name" after first appearance
+summer_expense_rep$`Service Name` <- ""
+summer_expense_rep$Fund <- ""
+summer_expense_rep$`Cost Center Name` <- ""
+
+# --- assign first appearance ---
+
+# ensure first appearance of each section is retained
+summer_expense_rep$`Service Name`[first_row_sfp] <- "SRV0754 Summer Food Service Program"
+
+summer_expense_rep$Fund[first_row_1001gf] <- "1001 General Fund"
+
+summer_expense_rep$Fund[first_row_5000sf] <- "5000 State Grants Fund"
+
+summer_expense_rep$`Cost Center Name`[first_row_ccn] <- "CCA000347 Summer Food Service Program"
+
+# --- add blank rows ---
+
+# add blank rows after each section
+writeData(wb, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
+          startRow = first_row_1001gf + 2, colNames = FALSE)
+
+writeData(wb, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
+          startRow = first_row_5000sf + 2, colNames = FALSE)
+
+writeData(wb, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
+          startRow = first_row_ccn + 2, colNames = FALSE)
+
+# --- write Data and Format Sections ---
+
+# write data before each blank row
+writeData(wb, "Summer Expense Report", summer_expense_rep[1:first_row_1001gf, ], colNames = TRUE, startRow = 2)
+writeData(wb, "Summer Expense Report", summer_expense_rep[(first_row_1001gf + 1):first_row_5000sf, ], 
+          startRow = first_row_1001gf + 3, colNames = FALSE)
+writeData(wb, "Summer Expense Report", summer_expense_rep[(first_row_5000sf + 1):first_row_ccn, ], 
+          startRow = first_row_5000sf + 3, colNames = FALSE)
+
+# --- write the rest of the data ---
+
+# write remaining data after the last section
+writeData(wb, "Summer Expense Report", summer_expense_rep[(first_row_ccn + 1):nrow(summer_expense_rep), ], 
+          startRow = first_row_ccn + 3, colNames = FALSE)
+```
+
+6. Analysis Table
+Here I am working to create the second table that is in the `754 SFSP Expense Report`. 
+
+```{r analysistbl}
+# clean and calculate with blanks for NA values
+summer_expense_rep <- summer_expense_rep |> 
+  mutate(
+    `Total Budget` = as.numeric(gsub("[^0-9.]", "", `Total Budget`)),
+    `GL YTD EXP` = as.numeric(gsub("[^0-9.]", "", `GL YTD EXP`)),
+    `Remaining Balance` = ifelse(is.na(`GL YTD EXP`), "", `Total Budget` - `GL YTD EXP`)
+  )
+```
+
+7. Saving the workbook
+Here I am writing and saving the workbook
+
+```{r writewb}
+# save the workbook
+saveWorkbook(wb, "FY_2024_Budget_and_Actual_as_of_07/31/2024.xlsx", overwrite = TRUE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#####
+####
 ### Plots
 Making some plots that show different perspectives on the budgets vs. actuals.
 
@@ -276,8 +415,8 @@ tot_neg_spending <- ggplot(negative_spending, aes(x = Service, y = `Total Spent`
 tot_neg_spending
 
 # saving the plot
-ggsave("tot_neg_spending.pdf",
-       width = 30, height = 20)
+ggsave("plots/tot_neg_spending.pdf",
+       width = 40, height = 20)
 ```
 
 ## July Actual Spending
@@ -309,7 +448,7 @@ july_spending_plot <- ggplot(budg_vs_actuals, aes(x = Service, y = `Actuals_2024
 print(july_spending_plot)
 
 # saving the plot
-ggsave("july_spending_plot.pdf",
+ggsave("plots/july_spending_plot.pdf",
        width = 30, height = 20)
 ```
 
