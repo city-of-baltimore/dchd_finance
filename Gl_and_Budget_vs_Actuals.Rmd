@@ -8,7 +8,7 @@ output: html_document
 ## Project Overview
 This markdown file will use the DHCD Finance dept documents that are for reporting expenditures and GL data. The data is collected from Workday.
 
-```{r libraries}
+```{r libraries, warning=FALSE, message=TRUE}
 # libraries for data analysis
 library(dplyr)
 library(here)
@@ -223,7 +223,7 @@ expense_report_tbl <- expense_report_tbl |>
 ```
 
 ###
-## Create the Excel workbook
+### Create the Excel workbook
 Now I will create the workbook that will be used to display the data that is seen on the `754 SFSP Expense Report`. 
 
 I am going to break it up in steps to follow it easier.
@@ -277,22 +277,37 @@ first_row_ccn <- which(tolower(summer_expense_rep$`Cost Center Name`) == tolower
 # --- create a workbook ---
 
 # add the worksheet to the created workbook
-wb <- createWorkbook()
-addWorksheet(wb, "Summer Expense Report")
+wb1 <- createWorkbook()
+addWorksheet(wb1, "Summer Expense Report")
 
 # --- add Title (Row 1) ---
 
 # add a header, style, and color with the label "Summer Analysis" in the first row
-writeData(wb, "Summer Expense Report", "FY 2024 Budget and Actual as of 07/31/2024", startRow = 1, startCol = 1)
-header_style <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#FFA500")
-mergeCells(wb, "Summer Expense Report", cols = 1:ncol(summer_expense_rep), rows = 1)
-addStyle(wb, "Summer Expense Report", header_style, rows = 1, cols = 1:ncol(summer_expense_rep), gridExpand = TRUE)
+writeData(wb1, "Summer Expense Report", "FY 2024 Budget and Actual as of 07/31/2024", startRow = 1, startCol = 1)
+header_style <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#ED7D31")
+
+# merge the cells
+mergeCells(wb1, "Summer Expense Report", cols = 1:ncol(summer_expense_rep), rows = 1)
+addStyle(wb1, "Summer Expense Report", header_style, rows = 1, cols = 1:ncol(summer_expense_rep), gridExpand = TRUE)
 
 # --- align for column headers ---
 
 # center alignment for column headers
 center_style <- createStyle(halign = "center", valign = "center")
-addStyle(wb, "Summer Expense Report", center_style, rows = 2, cols = 1:ncol(summer_expense_rep), gridExpand = TRUE)
+addStyle(wb1, "Summer Expense Report", center_style, rows = 2, cols = 1:ncol(summer_expense_rep), gridExpand = TRUE)
+
+# --- style the column names (e.g., "Service Name", "Fund", etc.) ---
+
+# styling the column names for the datatable
+column_names_style <- createStyle(
+  halign = "center", 
+  valign = "center", 
+  textDecoration = "bold", 
+  fgFill = "#ED7D31" 
+)
+
+# apply the style to the column names (first row of data)
+addStyle(wb1, "Summer Expense Report", column_names_style, rows = 2, cols = 1:ncol(summer_expense_rep), gridExpand = TRUE)
 
 # --- identify after first appearance ---
 
@@ -315,326 +330,224 @@ summer_expense_rep$`Cost Center Name`[first_row_ccn] <- "CCA000347 Summer Food S
 # --- add blank rows ---
 
 # add blank rows after each section
-writeData(wb, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
+writeData(wb1, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
           startRow = first_row_1001gf + 2, colNames = FALSE)
 
-writeData(wb, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
+writeData(wb1, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
           startRow = first_row_5000sf + 2, colNames = FALSE)
 
-writeData(wb, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
+writeData(wb1, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
           startRow = first_row_ccn + 2, colNames = FALSE)
 
 # --- write Data and Format Sections ---
 
 # write data before each blank row
-writeData(wb, "Summer Expense Report", summer_expense_rep[1:first_row_1001gf, ], colNames = TRUE, startRow = 2)
-writeData(wb, "Summer Expense Report", summer_expense_rep[(first_row_1001gf + 1):first_row_5000sf, ], 
+writeData(wb1, "Summer Expense Report", summer_expense_rep[1:first_row_1001gf, ], colNames = TRUE, startRow = 2)
+
+writeData(wb1, "Summer Expense Report", summer_expense_rep[(first_row_1001gf + 1):first_row_5000sf, ], 
           startRow = first_row_1001gf + 3, colNames = FALSE)
-writeData(wb, "Summer Expense Report", summer_expense_rep[(first_row_5000sf + 1):first_row_ccn, ], 
+
+writeData(wb1, "Summer Expense Report", summer_expense_rep[(first_row_5000sf + 1):first_row_ccn, ], 
           startRow = first_row_5000sf + 3, colNames = FALSE)
+
+writeData(wb1, "Summer Expense Report", 
+          summer_expense_rep[(first_row_5000sf + 1):first_row_ccn, ], 
+          startRow = first_row_5000sf + 2, colNames = FALSE)
+
+# re-assign first_row_ccn value to appear after first_row_5000sf
+summer_expense_rep$`Cost Center Name`[first_row_5000sf] <- "CCA000347 Summer Food Service Program"
+
 
 # --- write the rest of the data ---
 
 # write remaining data after the last section
-writeData(wb, "Summer Expense Report", summer_expense_rep[(first_row_ccn + 1):nrow(summer_expense_rep), ], 
+writeData(wb1, "Summer Expense Report", summer_expense_rep[(first_row_ccn + 1):nrow(summer_expense_rep), ], 
           startRow = first_row_ccn + 3, colNames = FALSE)
+
+# --- saving the workbook ---
+
+# save the workbook
+saveWorkbook(wb1, "summer_food_program_report.xlsx", overwrite = TRUE)
 ```
 
-6. Analysis Table
-Here I am working to create the second table that is in the `754 SFSP Expense Report`. 
+5. Calculating the columns for the Analysis Table
+Create the columns that are needed for the second table that is in the `754 SFSP Expense Report`.
 
-```{r analysistbl}
-# clean and calculate with blanks for NA values
-summer_expense_rep <- summer_expense_rep |> 
+**Note: Only use the other months in the Fiscal Month call if those months are present in the dataset. If not then do not use it**
+
+```{r calculatingcols}
+# create a new dataframe with only the new columns included and not the rest
+# tblwhodis is a placeholder for the new calculated columns
+
+# --- calculate the Remaining Balance column ---
+# create a new column for the remaining balance and make the gl ytd exp numeric
+tblwhodis <- summer_expense_rep |> 
   mutate(
     `Total Budget` = as.numeric(gsub("[^0-9.]", "", `Total Budget`)),
     `GL YTD EXP` = as.numeric(gsub("[^0-9.]", "", `GL YTD EXP`)),
-    `Remaining Balance` = ifelse(is.na(`GL YTD EXP`), "", `Total Budget` - `GL YTD EXP`)
-  )
-```
+    `Remaining Balance` = ifelse(is.na(`GL YTD EXP`), "", `Total Budget` - `GL YTD EXP`),)
 
-7. Saving the workbook
-Here I am writing and saving the workbook
+# --- create a numerical fiscal month ---
 
-```{r writewb}
-# save the workbook
-saveWorkbook(wb, "FY_2024_Budget_and_Actual_as_of_07/31/2024.xlsx", overwrite = TRUE)
-```
+# assign each month a number (July = 1, August = 2, ..., June = 12)
+# Convert month names to fiscal months
+month_to_fiscal <- c(
+  "July" = 1, "August" = 2, "September" = 3, "October" = 4, "November" = 5, "December" = 6,
+  "January" = 7, "February" = 8, "March" = 9, "April" = 10, "May" = 11, "June" = 12
+)
 
+# --- Projected Y|E Value calculation ---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#####
-####
-### Plots
-Making some plots that show different perspectives on the budgets vs. actuals.
-
-## Negative Spending
-The plot below will show negative spending for service types vs. total spent.
-
-```{r totspentnegplot}
-# remove the leading numbers before the service name for plotting 
-budg_vs_actuals <- budg_vs_actuals |> 
-  mutate(Service = sub("^\\S+\\s*", "", Service))
-
-# filter the dataset for negative spending values
-negative_spending <- budg_vs_actuals|> 
-  filter(`Total Spent` < 0)
-
-# plotting data below for different perspectives
-tot_neg_spending <- ggplot(negative_spending, aes(x = Service, y = `Total Spent`)) +
-  geom_col(fill = "red") +  # Bar plot with red bars for negative values
-  theme_minimal() +
-  scale_y_continuous(labels = scales::comma) +
-  labs(title = "Services with Negative Spending", 
-       x = "Service", 
-       y = "Total Spent") +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 20),  # Adjust x-axis text size
-    axis.text.y = element_text(size = 20),  # Adjust y-axis text size
-    axis.title.x = element_text(size = 22),  # Adjust x-axis title size
-    axis.title.y = element_text(size = 20),  # Adjust y-axis title size
-    plot.title = element_text(size = 25, hjust = 0.5)  # Adjust plot title size
+# calculate the Projected Y|E Value, keeping placeholders for Jan-Jun
+tblwhodis <- tblwhodis |> 
+  mutate(
+    FiscalMonth = month_to_fiscal["December"],  # replace this with the current month that it is. So it is December for this.
+    `Projected Y|E Value` = ifelse(  # calculate the Projected Y|E Value using the fiscal month
+      is.na(`GL YTD EXP`) | is.na(FiscalMonth), 
+      NA,  # set NA for missing data or when FiscalMonth is not available
+      (`GL YTD EXP` / FiscalMonth) * 12
+    )
   )
 
-# viewing the plot
-tot_neg_spending
+# --- Sur / (Def) column ---
 
-# saving the plot
-ggsave("plots/tot_neg_spending.pdf",
-       width = 40, height = 20)
-```
-
-## July Actual Spending
-The plot below will show spending for service types and July actual spent.
-
-```{r julyplot}
-# Create a plot showing Actuals spent for July by Service with positive (blue) and negative (red) bars
-july_spending_plot <- ggplot(budg_vs_actuals, aes(x = Service, y = `Actuals_2024-07`, fill = `Actuals_2024-07` > 0)) +
-  geom_col() +  # Create bars
-  scale_fill_manual(values = c("red", "blue"), 
-                    labels = c("Negative", "Positive")) +  # Custom legend labels
-  theme_minimal() +
-  scale_y_continuous(labels = scales::comma) +  # Format y-axis to show real values
-  labs(title = "Actual Spending for July by Service", 
-       x = "Service", 
-       y = "Actuals Spent (July 2024)") +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 20),  # X-axis text size
-    axis.text.y = element_text(size = 22),  # Y-axis text size
-    axis.title.x = element_text(size = 20),  # X-axis title size
-    axis.title.y = element_text(size = 20),  # Y-axis title size
-    plot.title = element_text(size = 24, hjust = 0.5),  # Plot title size
-    legend.title = element_blank(),  # Remove legend title
-    legend.text = element_text(size = 24),  # Increase legend text size
-    legend.key.size = unit(1.5, "lines")  # Increase the size of the legend key (color box)
+# calculate the new column here
+tblwhodis <- tblwhodis |>
+  mutate(
+    `Sur / (Def)` = ifelse(
+      is.na(`Total Budget`) | is.na(`Projected Y|E Value`),
+      NA,  # Return NA if either column is missing
+      `Total Budget` - `Projected Y|E Value`  # Subtraction calculation
+    )
   )
 
-# Print the plot
-print(july_spending_plot)
+# --- Notes column ---# ---`Projected Y|E Value` Notes column ---
 
-# saving the plot
-ggsave("plots/july_spending_plot.pdf",
-       width = 30, height = 20)
+# here we will make a notes column that can be used in excel
+# initialize as empty character column
+tblwhodis$Notes <- NA_character_  
 ```
 
+6. Creating the Analysis Table
+This is the analysis table that will be apart of the main excel table.
 
+```{r analysistbk}
+# only keep the columns that are needed for this table
+analysis_tbl <- tblwhodis |> 
+  select(`Remaining Balance`, `Projected Y|E Value`, `Sur / (Def)`, Notes)
 
+# --- create a workbook ---
 
+# add the worksheet to the created workbook
+wb2 <- createWorkbook()
+addWorksheet(wb2, "analysis_tbl")
 
+# --- write data to the worksheet 2 ---
 
-## Example code below
+writeData(wb2, "analysis_tbl", analysis_tbl, startRow = 2, startCol = 1, colNames = TRUE)
 
-# the code below will read a Payroll Expense Ledger report
-# from workday and create a summary excel file and a couple charts
+# --- header for the table---
 
-# these will load a couple additional R tools for the work
-# libraries are extra R tools
+# add a header, style, and color with the label "Analysis" in the first row
+writeData(wb2, "analysis_tbl", "ANALYSIS", startRow = 1, startCol = 1)
+header_style <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#C6E0B4")
 
-```{r libraries}
-library(tidyverse)
-library(ggplot2)
+# merge the cells
+mergeCells(wb2, "analysis_tbl", cols = 1:ncol(analysis_tbl), rows = 1)
+addStyle(wb2, "analysis_tbl", header_style, rows = 1, cols = 1:ncol(analysis_tbl), gridExpand = TRUE)
+
+# --- align for column headers ---
+
+# center alignment for column headers
+center_style <- createStyle(halign = "center", valign = "center")
+addStyle(wb2, "analysis_tbl", center_style, rows = 2, cols = 1:ncol(analysis_tbl), gridExpand = TRUE)
+
+# --- style the column names (e.g., "Remaining Balance", "Sur / (Def)", etc.) ---
+
+# styling the column names for the datatable
+column_names_style <- createStyle(
+  halign = "center", 
+  valign = "center", 
+  textDecoration = "bold", 
+  fgFill = "#C6E0B4" 
+)
+
+# apply the style to the column names (first row of data)
+addStyle(wb2, "analysis_tbl", column_names_style, rows = 2, cols = 1:ncol(analysis_tbl), gridExpand = TRUE)
+
+# --- save the workbook 2 ---
+
+# saving the workbook
+saveWorkbook(wb2, "analysis_tbl.xlsx", overwrite = TRUE)
 ```
 
-## Reading the expenditure data
-This will read the excel file. The file needs to be in the same folder as the R script. And the name in parenthesis needs to match the file name of the excel file.
+7. Combining the workbooks
+Last step, "Whew!", is to join the two of these workbooks together to have 1 full working workbook that can be used for the team. 
 
-```{r expendata}
-expenditure_data <-
-  readxl::read_xlsx("June Payroll Expense Ledger by Org Excel 2024-07-17 10_21 EDT.xlsx",
-                    skip = 8)
+```{r combiningwbs}
+# --- combine the two workbooks on the same worksheet with full formatting ---
+
+# create a new workbook for the combined data
+wb_combined <- createWorkbook()
+
+# add a worksheet for combined data
+addWorksheet(wb_combined, "tables_unite")
+
+# define styles
+title_style_summer <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#FFA500", fontSize = 11)
+title_style_analysis <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#C6E0B4", fontSize = 11)
+
+header_style_summer <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#FFA500")
+header_style_analysis <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#C6E0B4")
+
+# --- write the first table (summer_expense_rep) with title and formatting ---
+
+# add title for the first table
+writeData(wb_combined, "tables_unite", "Summer Expense Report", startRow = 1, startCol = 1)
+mergeCells(wb_combined, "tables_unite", cols = 1:ncol(summer_expense_rep), rows = 1)
+addStyle(wb_combined, "tables_unite", title_style_summer, rows = 1, cols = 1:ncol(summer_expense_rep), gridExpand = TRUE)
+
+# write the first table
+writeData(wb_combined, "tables_unite", summer_expense_rep, startRow = 2, startCol = 1, colNames = TRUE)
+
+# apply column header style to the first table
+addStyle(wb_combined, "tables_unite", header_style_summer, rows = 2, cols = 1:ncol(summer_expense_rep), gridExpand = TRUE)
+
+# --- add 2 blank columns for separation ---
+
+# count the number of rows and columns
+num_rows_summer <- nrow(summer_expense_rep)
+num_cols_summer <- ncol(summer_expense_rep)
+
+# write blank columns for separation
+writeData(wb_combined, "tables_unite", matrix("", nrow = num_rows_summer + 2, ncol = 2), 
+          startRow = 1, startCol = num_cols_summer + 1, colNames = FALSE)
+
+# --- Write the second table (analysis_tbl) with title and formatting ---
+
+# add title for the second table
+writeData(wb_combined, "tables_unite", "Analysis Table", startRow = 1, startCol = num_cols_summer + 3)
+mergeCells(wb_combined, "tables_unite", cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(analysis_tbl)), rows = 1)
+addStyle(wb_combined, "tables_unite", title_style_analysis, rows = 1, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(analysis_tbl)), gridExpand = TRUE)
+
+# write the second table
+writeData(wb_combined, "tables_unite", analysis_tbl, startRow = 2, startCol = num_cols_summer + 3, colNames = TRUE)
+
+# apply column header style to the second table
+addStyle(wb_combined, "tables_unite", header_style_analysis, rows = 2, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(analysis_tbl)), gridExpand = TRUE)
+
+# --- save the combined workbook ---
+
+# saving the workbook
+# r does not like slashes so you need to do underscores
+# update the name of the output file as needed
+saveWorkbook(wb_combined, "FY 2024 Budget and Actual as of 12_31_2024.xlsx", overwrite = TRUE) # change the name of the output file accordingly
 ```
 
-## Aggregating and summing the expenditures
-This part aggregates the transaction in the GL file by service then sums the expenditures.
-
-```{r groupby}
-service_exp <- expenditure_data |>
-  group_by(`Service (Cost Center Hierarchy)`) |>
-  summarise(total_expenditures = sum(`Ledger Amount ($)`)) |>
-  ungroup() |>
-  arrange(desc(total_expenditures))
-```
-
-## Creating an object
-You just created an object called "service_exp" which can be seen be executing this.
-
-```{r print}
-print(service_exp)
-```
-
-## Aggregating the GL file by cost center
-This part aggregates the transaction in the GL file by cost center then sums the expenditures.
-
-```{r aggregates}
-cost_center_exp <- expenditure_data |>
-  group_by(`Cost Center`) |>
-  summarise(total_expenditures = sum(`Ledger Amount ($)`)) |>
-  ungroup() |>
-  arrange(desc(total_expenditures))
-```
-
-## Creating an object 
-you just created an object called "cost_center_exp" which can be seen be executing this.
-
-```{r object}
-cost_center_exp
-```
-
-## Writing out the costcenter and the expenitures to an excel file 
-This part creates an excel file with the cost center and service expenditures.
-
-```{r write_excel_file}
-writexl::write_xlsx(list(`expend by service` = service_exp,
-                         `expend by cost center` = cost_center_exp), "summarized_expenditures.xlsx")
-```
-
-
-## Aggregating the data
-This part aggregates by date posted, summing expenditures by the day the posted to the GL.
-
-```{r sums}
-daily_spend <- expenditure_data |>
-  mutate(day = floor_date(as.Date(`Accounting Date` ), "day")) |>
-  group_by(day) |>
-  summarise(total_expenditures = sum(`Ledger Amount ($)`)) |>
-  ungroup()
-
-print(daily_spend)
-```
-
-## Making the Chart
-This part makes the chart using columns from the daily_spend dataframe.
-
-```{r charts}
-daily_spend |>
-  ggplot(aes(day, total_expenditures))+
-  geom_col() +
-  theme_classic() +
-  scale_y_continuous(labels = unit_format(unit = "M", scale = 1e-6)) +
-  geom_hline(yintercept=0) +
-  labs(title = "DGS Posted Expenditures throughout the month of June 2024",
-       subtitle = "Expenditures by day",
-       y = "Expenditures ($)",
-       x = "Date posted on GL")
-```
-
-## Saving the chart 
-This part saves the chart.
-
-```{r savingchart}
-ggsave("daily_spend.pdf",
-       width = 8, height = 5)
-```
-
-
-## Aggregates 
-This part aggregates bby fund, summing expenditures, then makes a chart.
-
-```{r exped_plot}
-expenditure_data |>
-  separate(Fund, into = c("number", "Fund"), extra = "merge", remove = T) |>
-  group_by(Fund) |>
-  summarise(total_spend = sum(`Ledger Amount ($)`)) |>
-  ggplot(aes(reorder(Fund, (total_spend)), total_spend)) +
-  geom_col(fill = "orange") +
-  theme_classic() +
-  coord_flip() +
-  scale_y_continuous(labels = unit_format(unit = "M", scale = 1e-6), expand = c(0, 0), limits = c(0,3000000))+
-  labs(title = "DGS Posted Expenditures by Fund",
-       subtitle = "Posted in June 2024",
-       y = "Expenditures ($)",
-       x = "")
-```
-
-## Saving the chart as PDF
-This saves the chart as a pdf.
-
-```{r savingplot}
-ggsave("spend_by_fund.pdf",
-       width = 8.5, height = 5)
-```
-
-## Filtering  
-This part filters transaction to the manual JEs then aggregates by by fund summing the GL transactions by the fund.
-
-```{r filters}
-manual_change_data <- expenditure_data |>
-  filter(str_detect(`Journal Source`, "Manual")) |>
-  separate(Fund, into = c("number", "Fund"), extra = "merge", remove = T) |>
-  group_by(Fund) |>
-  summarise(total_spend = sum(`Ledger Amount ($)`))
-```
-
-## Chart for manual GL's 
-This part makes the chart showing where the manual GL's occur.
-
-```{r ggplot}
-ggplot() +
-  geom_col(data = manual_change_data,
-           mapping = aes(reorder(`Fund`, (total_spend)), total_spend),
-           fill = "orange") +
-  geom_text(data = manual_change_data,
-            mapping = aes(reorder(`Fund`, (total_spend)), 0,
-                          label = scales::dollar(total_spend/1000000, suffix = "M")), hjust = -.2) +
-  theme_classic() +
-  geom_hline(yintercept=0) +
-  coord_flip() +
-  geom_text() +
-  scale_y_continuous(labels = unit_format(unit = "M", scale = 1e-6), expand = c(0, 0))+
-  labs(title = "Manual Accounting Adjustments",
-       subtitle = "Made in June 2024",
-       y = "Expenditures ($)",
-       x = "")
-
-```
-
-## Saving the chart to PDF format
-This saves the chart as a pdf.
-
-```{r ggsave}
-ggsave("manual_adjustments_by_fund.pdf",
-       width = 8.5, height = 5)
-```
-
-
-
-
-
+#### YOU DID IT ####
+Congratulations! You did a wonderful and excellent job coding! 
+If this is your first real coding script, then I must say you choose a tricky script. 
+Go ahead and call yourself a Rstudio programmer you data analyst!
 
 
 
