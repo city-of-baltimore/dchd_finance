@@ -19,3 +19,4 @@ In Rstudio, go to File -> New Project -> Version Control -> git -> then add the 
 
 # Documentation
 There is documentation in the Documents folder on how to use github and rstudio. Within the folder are "Cheatsheets" for Rstudio on understanding Markdown files and other coding logistics. 
+There is a file that details how to use the Rmarkdown file for the GL_and_Budget_vs_Actuals file. 
