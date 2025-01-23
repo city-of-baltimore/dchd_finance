@@ -170,10 +170,6 @@ bac_nh_actual_spent <- budg_vs_actuals |>
                          "CCA000308 Waverly Child Care Center")
   )
 
-# automatically detect the column for July
-july_column <- grep("Actuals_\\d{4}-07$", names(bac_nh_actual_spent), value = TRUE)
-
-
 # calculate the maximum spending for each cost center
 bac_nh_max_spent_data <- bac_nh_actual_spent |> 
   group_by(`Cost Center`) |> 
