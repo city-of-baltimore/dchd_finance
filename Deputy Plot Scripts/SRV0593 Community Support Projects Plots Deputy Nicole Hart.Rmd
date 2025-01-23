@@ -167,7 +167,6 @@ ggsave("csp_nh_tot_neg_spcat_deputy_nicole.pdf",
 
 ## Actual Spending by month
 The plot below will show spending for service types and the actual spent for a specific month.
-*Feel free to change the months that you would like to show.*
 
 ```{r monthplot}
 # filter the dataset for the actual spent
