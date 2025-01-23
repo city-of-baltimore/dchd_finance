@@ -162,7 +162,6 @@ ggsave("csp_mc_tot_neg_spcat_deputy_wendi.pdf", width = 30, height = 20)
 
 ## Actual Spending by month
 The plot below will show spending for service types and the actual spent for a specific month.
-*Feel free to change the months that you would like to show.*
 
 ```{r monthplot}
 # filter the dataset for the actual spent
@@ -173,10 +172,6 @@ csp_mc_actual_spent <- budg_vs_actuals |>
                          "CCA000249 Community Catalyst Grants (HCD)",
                          "CCA001407 HUD 108 Loan Debt Service")
   )
-
-
-# automatically detect the column for July
-july_column <- grep("Actuals_\\d{4}-07$", names(csp_mc_actual_spent), value = TRUE)
 
 # calculate the maximum spending for each cost center
 csp_mc_max_spent_data <- csp_mc_actual_spent |> 
