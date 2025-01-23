@@ -156,11 +156,9 @@ message(scales::percent(nrow(mismatched_overall_expenditures)/nrow(overall_spend
 ```
 
 ## Making an output table
-This will create the table that can be used for `754 SFSP Expense Report`. Ideally we want to keep the pre-existing data but make placeholders for data that we do not currently have for specific months. What we can do is make placeholders for the data and then we can tweak it as we go.
+This will create the table that can be used for `754 SFSP Expense Report`. 
 
 ```{r outputtable}
-# for now I am using the tot_actual cat - I cannot figure out where they are getting this total bud from
-
 # define all months expected in the report (Jan - Dec)
 expected_months <- month.name
 
@@ -172,7 +170,7 @@ expense_report_tbl <- budg_vs_actuals |>
      Fund = Fund,
     'Cost Center Name' = `Cost Center`,
     'Spend Category' = `Spend Category`,
-    'Total Budget' = `Total Actuals`, 
+    'Total Budget' = `Revised Budget`, 
     `Actuals_2024-07` = ifelse(is.na(`Actuals_2024-07`), "", `Actuals_2024-07`), # change the year as needed
     `Actuals_2024-08` = ifelse(is.na(`Actuals_2024-08`), "", `Actuals_2024-08`), 
     `Actuals_2024-09` = ifelse(is.na(`Actuals_2024-09`), "", `Actuals_2024-09`), 
@@ -206,20 +204,15 @@ expense_report_tbl <- expense_report_tbl |>
   mutate(`GL YTD EXP` = rowSums(across(July:December), na.rm = TRUE))
 ```
 
-^^^**DOUBLE CHECK THIS BECAUSE THE NUMBERS MATCH THE TOTAL BUD WHICH THEY SHOULD NOT?**
-
-
-
-
 ###
 ### Create the Excel workbook
 Now I will create the workbook that will be used to display the data that is seen on the `754 SFSP Expense Report`. 
 
-I am going to break it up in steps to follow it easier.
+I am going to break it up in steps to make it easier to follow. 
 
 1. I want to put all of the service data into a dataset that will have everything in it.
 2. I want to filter the data to only be focused on the Summer Food Service Program.
-3. I want to sort by the Fund column. 
+3. I want to sort by the Fund column to show the general fund first then the state fund. 
 
 ```{r filteringsumprogram}
 # group the data by Service Name and arrange by Spend Category
@@ -361,8 +354,6 @@ saveWorkbook(wb1, "summer_food_program_report.xlsx", overwrite = TRUE)
 
 5. Calculating the columns for the Analysis Table
 Create the columns that are needed for the second table that is in the `754 SFSP Expense Report`.
-
-**Note: Only use the other months in the Fiscal Month call if those months are present in the dataset. If not then do not use it**
 
 ```{r calculatingcols}
 # create a new dataframe with only the new columns included and not the rest
@@ -541,7 +532,7 @@ saveWorkbook(wb_combined, "FY 2024 Budget and Actual as of 12_31_2024.xlsx", ove
 ```
 
 #### YOU DID IT ####
-Congratulations! You did a wonderful and excellent job coding! 
+Congratulations! You did a wonderful job coding! 
 If this is your first real coding script, then I must say you choose a tricky script. 
 Go ahead and call yourself a Rstudio programmer you data analyst!
 
