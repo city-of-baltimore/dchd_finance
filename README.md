@@ -20,3 +20,11 @@ In Rstudio, go to File -> New Project -> Version Control -> git -> then add the 
 # Documentation
 There is documentation in the Documents folder on how to use github and rstudio. Within the folder are "Cheatsheets" for Rstudio on understanding Markdown files and other coding logistics. 
 There is a file that details how to use the Rmarkdown file for the GL_and_Budget_vs_Actuals file. 
+
+# Deputy Plot Scripts
+This folder contains rmd files that are used to create the plots for specific deputies that corolate to each call center. The files will make three different plots. 
+
+  1. Cost center negative spending plot
+  2. Cost center negative spending drilled down to the spend category
+  3. Total spending for the month of July 
+
