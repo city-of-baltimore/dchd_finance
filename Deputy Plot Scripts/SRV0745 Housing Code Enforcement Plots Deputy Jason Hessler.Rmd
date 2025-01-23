@@ -1,18 +1,18 @@
 ---
-title: "SRV0593 Community Support Projects Plots"
+title: "SRV0745 Housing Code Enforcement Plots Deputy Jason Hessler"
 author: "Selenea Gibson and Jason Howard"
-date: "2025-01-17"
+date: "2025-01-21"
 output: html_document
 ---
 
 ## Project Overview
 This markdown file will use the DHCD Finance dept documents that are for making plots to help showcase the findings from the `Gl_and_Budget_vs_Actuals.rmd` file. This is part of a series of rmd files that will allow you to make plots for the Deputy by cost center.
 
-*Note: This will make plots for `SRV0593 Community Support Projects` only and will be for Deputies Wendi Redfern, Mary Correria, and Nicole Hart*
+*Note: This will make plots for `SRV0745 Housing Code Enforcement` only and will be for Deputy Jason Hessler*
 
 ### Libraries
 
-```{r libraries, warning=FALSE, message=TRUE}
+```{r libraries, warning=TRUE, message=FALSE}
 # libraries for data analysis
 library(dplyr)
 library(here)
@@ -66,33 +66,45 @@ for(i in seq_along(name_prefixes)){
  names(budg_vs_actuals)
 ```
 
-# Plots for Deputy Wendi Redfern
+# Plots for Deputy Jason Hessler
 Making some plots that show different perspectives with the `budg_vs_actuals` df. These three plots will look at the following:
-*Service* `SRV0593 Community Support Projects`
-*Cost Center* `CCA000248 Community Support Projects Unallocated Appropriation (HCD)` and `CCA000249 Community Catalyst Grants (HCD)`.
+*Service* 
+  1.`SRV0745 Housing Code Enforcement`
+*Cost Center* 
+  1.`CCA000322 Housing Code Enforcement Administration`
+  2.`CCA000323 Housing Code Enforcement Legal`
+  3.`CCA000324 Housing Code Whole Block Demolition`
+  4.`CCA000325 Housing Code Notice Production Constituent Services`
+  5.`CCA000327 Housing Code Special Investigations`
+  6.`CCA000329 Housing Code Demolition Contracts`
 *Total Spending by Month* 
 
-## Negative Spending by Cost 
+## Negative Spending by Cost Center
 The plot below will show negative spending for service types & Cost Center vs. total spent.
+*Note: If the plot has no values then there was no negative spending to be found for any of the cost centers*
 
 ```{r totspentnegplot}
 # filter the dataset for negative spending values
-negative_spending <- budg_vs_actuals |>
+hce_jh_nh_negative_spending <- budg_vs_actuals |>
   filter(
-    Service == "SRV0593 Community Support Projects" &
-    `Cost Center` %in% c("CCA000259 Community Support Projects Administration", 
-                         "CCA000249 Community Catalyst Grants (HCD)") &
+    Service == "SRV0745 Housing Code Enforcement" &
+    `Cost Center` %in% c("CCA000322 Housing Code Enforcement Administration",
+                         "CCA000323 Housing Code Enforcement Legal",
+                         "CCA000324 Housing Code Whole Block Demolition",
+                         "CCA000325 Housing Code Notice Production Constituent Services",
+                         "CCA000327 Housing Code Special Investigations",
+                         "CCA000329 Housing Code Demolition Contracts") &
     `Total Spent` < 0
   )
 
 # plotting data below for different perspectives
-tot_neg_ccenter <- ggplot(negative_spending, aes(x = reorder(`Cost Center`, `Total Spent`), y = `Total Spent`)) +
+hce_jh_nh_tot_neg_ccenter <- ggplot(hce_jh_nh_negative_spending, aes(x = reorder(`Cost Center`, `Total Spent`), y = `Total Spent`)) +
   geom_col(fill = "red", width = 0.5) +  # Adjust bar width for better aesthetics
   theme_minimal() +  # Minimalistic theme
-  scale_y_continuous(labels = scales::dollar) +  # Format y-axis with commas
+  scale_y_reverse(labels = scales::dollar) +  # Reverse y-axis and format with dollar labels
   labs(
     title = "Total Negative Spending by Cost Center",
-    subtitle = "Service: SRV0593 Community Support Projects",
+    subtitle = "Service: SRV0745 Housing Code Enforcement",
     x = "Cost Center",
     y = "Total Spent (USD)",
     caption = "Data Source: BBMR Data"  # Add data source
@@ -111,25 +123,26 @@ tot_neg_ccenter <- ggplot(negative_spending, aes(x = reorder(`Cost Center`, `Tot
   )
 
 # display the plot
-print(tot_neg_ccenter)
+print(hce_jh_nh_tot_neg_ccenter)
 
 # saving the plot
-ggsave("plots/totnegspend_costcenter_deputy_wendi.pdf", # remember to change this output name for the month
+ggsave("hce_jh_nh_tot_neg_ccenter_deputy_jason.pdf",
        width = 30, height = 20)
 ```
 
 ## Negative spending by Spend Category
-This plot below will show the spending drilled down further by the Spend Category to highlight the areas where there is a negative cost. 
+This plot below will show the spending drilled down further by the Spend Category to highlight the areas where there is a negative cost.
+*Note: If the plot has no values then there was no negative spending to be found for any of the cost centers*
 
 ```{r spendcat}
 # plotting data below for different perspectives
-tot_neg_spcat <- ggplot(negative_spending, aes(x = reorder(`Spend Category`, `Total Spent`), y = `Total Spent`)) +
+hce_jh_nh_tot_neg_spcat <- ggplot(hce_jh_nh_negative_spending, aes(x = reorder(`Spend Category`, `Total Spent`), y = `Total Spent`)) +
   geom_col(fill = "red", width = 0.5) +  # Adjust bar width for better aesthetics
-  theme_minimal() +  # Minimalistic theme
-  scale_y_continuous(labels = scales::dollar) +  # Format y-axis with commas
+  theme_minimal() +
+  scale_y_reverse(labels = scales::dollar) +  # Reverse y-axis and format with dollar labels
   labs(
     title = "Total Negative Spending by Spend Category",
-    subtitle = "Service: SRV0593 Community Support Projects",
+    subtitle = "Service: SRV0745 Housing Code Enforcement",
     x = "Spend Category",
     y = "Total Spent (USD)",
     caption = "Data Source: BBMR Data"  # Add data source
@@ -148,46 +161,50 @@ tot_neg_spcat <- ggplot(negative_spending, aes(x = reorder(`Spend Category`, `To
   )
 
 # display the plot
-print(tot_neg_spcat)
+print(hce_jh_nh_tot_neg_spcat)
 
 # saving the plot
-ggsave("plots/totnegspend_spendcat_deputy_wendi.pdf", # remember to change this output name for the month
+ggsave("hce_jh_nh_tot_neg_spcat_deputy_jason.pdf", 
        width = 30, height = 20)
 ```
 
 ## Actual Spending by month
-The plot below will show spending for service types and the actual spent for a specific month. *Feel free to change the months that you would like to show.*
+The plot below will show spending for service types and the actual spent for a specific month.
 
 ```{r monthplot}
 # filter the dataset for the actual spent
-actual_spent <- budg_vs_actuals |>
+hce_jh_nh_actual_spent <- budg_vs_actuals |>
   filter(
-    Service == "SRV0593 Community Support Projects" &
-    `Cost Center` %in% c("CCA000259 Community Support Projects Administration", 
-                         "CCA000249 Community Catalyst Grants (HCD)")
+    Service == "SRV0745 Housing Code Enforcement" &
+    `Cost Center` %in% c("CCA000322 Housing Code Enforcement Administration",
+                         "CCA000323 Housing Code Enforcement Legal",
+                         "CCA000324 Housing Code Whole Block Demolition",
+                         "CCA000325 Housing Code Notice Production Constituent Services",
+                         "CCA000327 Housing Code Special Investigations",
+                         "CCA000329 Housing Code Demolition Contracts")
   )
 
 # calculate the maximum spending for each cost center
-max_spent_data <- actual_spent |> 
+hce_jh_nh_max_spent_data <- hce_jh_nh_actual_spent |> 
   group_by(`Cost Center`) |> 
   filter(`Actuals_2024-07` == max(`Actuals_2024-07`)) |> 
   ungroup()
 
 # create a plot showing Actuals spent for July or a different plot
-# by Cost center with positive (blue) and negative (red) bars
-july_spending_plot <- ggplot(max_spent_data, aes(x = `Cost Center`, y = `Actuals_2024-07`)) +
+# by Cost center with positive (blue)
+hce_jh_nh_july_spending_plot <- ggplot(hce_jh_nh_max_spent_data, aes(x = `Cost Center`, y = `Actuals_2024-07`)) +
   geom_col(fill = "blue", width = 0.5) +  # Set all bars to blue
   theme_minimal() +
   scale_y_continuous(labels = scales::dollar) +  # Format y-axis to show dollar values
   labs(
     title = "Total Spending for Each Cost Center in July 2024",  # Update month/year
-    subtitle = "Service: SRV0593 Community Support Projects",
+    subtitle = "Service: SRV0745 Housing Code Enforcement",
     x = "Cost Center",
     y = "July Actuals ($)",
     caption = "Data Source: BBMR Data"  # Add data source
   ) + 
   theme(
-    axis.text.x = element_text(angle = 30, hjust = 1, size = 22),  # Rotate x-axis labels for readability
+    axis.text.x = element_text(angle = 30, hjust = 1, size = 20),  # Rotate x-axis labels for readability
     axis.text.y = element_text(size = 22),  # Adjust y-axis text size
     axis.title.x = element_text(size = 24, face = "bold"),  # Emphasize x-axis title
     axis.title.y = element_text(size = 24, face = "bold"),  # Emphasize y-axis title
@@ -203,13 +220,9 @@ july_spending_plot <- ggplot(max_spent_data, aes(x = `Cost Center`, y = `Actuals
   )
 
 # Display the plot
-print(july_spending_plot)
+print(hce_jh_nh_july_spending_plot)
 
 # saving the plot
-ggsave("plots/july_spending_deputy_wendi.pdf", # remember to change this output name for the month
-       width = 30, height = 20)
+ggsave("hce_jh_nh_july_spending_deputy_jason.pdf",
+       width = 45, height = 30)
 ```
-
-
-
-
