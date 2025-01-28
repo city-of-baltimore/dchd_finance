@@ -49,7 +49,7 @@ first_row_of_data <- readxl::read_xlsx(here("Data", budg_vs_act_file_name)) |>
   names() 
 
 
-name_prefixes <- tibble(column_names) |> 
+name_prefixes <- tibble(first_row_of_data) |> 
   mutate(prefixes = ifelse(str_detect(file_headers, "\\.\\."), 
                           NA_character_, 
                           file_headers)) |> 
