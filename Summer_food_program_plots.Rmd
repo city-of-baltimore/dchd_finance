@@ -1,0 +1,110 @@
+---
+title: "sript"
+author: "Selenea Gibson and Jason Howard"
+date: "2025-01-23"
+output: html_document
+---
+
+# Project Overview
+This markdown file will use the DHCD Finance dept data to calculate the columns that are provided from the `754 SFSP Expense Report`. There will be a series of plots to make the tables at the bottom of the report more appealing for what is being shown. This will be done through visuals 
+
+```{r libraries, warning=FALSE, message=TRUE}
+# libraries for data analysis
+library(dplyr)
+library(here)
+library(tidyverse)
+library(scales)
+library(DT)
+library(openxlsx)
+library(stringr)
+library(lubridate)
+```
+
+## Reading in the data 
+Reading in the files for the data that will be used for creating the plots that will represent the data on the bottom of the `754 SFSP Expense Report`.
+
+```{r readingdata}
+# reading in the dataset for the summer_expense_report
+summer_exp <- read.xlsx(here("FY 2024 Budget and Actual as of 12_31_2024.xlsx"))
+
+# set the first row as headers and remove it from the data
+summer_exp <- setNames(summer_exp[-1, ], as.character(unlist(summer_exp[1, ])))
+```
+
+## Creating plots
+Here I want to create plots that relate to the data that we see in the table. These will be used 
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
