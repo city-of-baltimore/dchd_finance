@@ -188,7 +188,10 @@ expense_report_tbl <- budg_vs_actuals |>
         }
       }), paste0("Actuals_", all_year_months)
     ))
-  )
+  ) |> 
+   group_by(Fund, `Spend Category`, `Cost Center Name`) |> 
+   summarise_if(is.numeric, sum, na.rm = TRUE) |> 
+  ungroup() 
 
 # check it out and see how it looks
 print(expense_report_tbl)
@@ -216,7 +219,7 @@ expense_report_tbl[ , month.name] <-
 
 # calculating the total expenditure budget amounts
 expense_report_tbl <- expense_report_tbl |> 
-  mutate(`Total Expenditures` = rowSums(across(January:December), na.rm = TRUE))
+  mutate(`Total Expenditures` = rowSums(across(July:December), na.rm = TRUE))
 ```
 
 ## Calculating the GL_YTD_EXP data
