@@ -162,51 +162,48 @@ This will create the table that can be used for `754 SFSP Expense Report`.
 # Extract unique years dynamically from actuals columns
 years <- unique(na.omit(str_extract(names(budg_vs_actuals), "(?<=Actuals_)\\d{4}")))
 
-# Define all possible Year-Month combinations based on detected years
+# Define month names dynamically
+month_names <- c("January", "February", "March", "April", "May", "June", 
+                 "July", "August", "September", "October", "November", "December")
+
+# Ensure all actual columns exist before summarizing
 months <- sprintf("%02d", 1:12)
 all_year_months <- unlist(lapply(years, function(year) paste(year, months, sep = "-")))
 
+for (col in paste0("Actuals_", all_year_months)) {
+  if (!col %in% names(budg_vs_actuals)) {
+    budg_vs_actuals[[col]] <- NA_real_  # Add missing columns filled with NA
+  }
+}
+
 # Build the expense report table dynamically
 expense_report_tbl <- budg_vs_actuals |> 
-  reframe(
-    'Service Name' = Service,
-    Fund = Fund,
-    'Cost Center' = `Cost Center`,
-    'Spend Category' = `Spend Category`,
-    'Revised Budget' = `Revised Budget`
-  ) |> 
-  # Add placeholder columns dynamically for all Year-Month combinations
-  bind_cols(
-    as_tibble(setNames(
-      lapply(all_year_months, function(x) {
-        column_name <- paste0("Actuals_", x)
-        if (column_name %in% names(budg_vs_actuals)) {
-          budg_vs_actuals[[column_name]]
-        } else {
-          rep(NA, nrow(budg_vs_actuals))
-        }
-      }), paste0("Actuals_", all_year_months)
-    ))
-  )
-
-# Rename columns for readability with correct month names
-expense_report_tbl <- expense_report_tbl |> 
-  rename_with(
-    .fn = function(x) {
-      month_num <- as.integer(str_extract(x, "(?<=-)(\\d{2})"))
-      year_num <- str_extract(x, "(?<=Actuals_)(\\d{4})")
-      
-      ifelse(
-        grepl("^Actuals_", x) & !is.na(month_num) & !is.na(year_num),
-        paste0(str_to_title(month.name[month_num]), " ", year_num),
-        x  # Keep original name if it doesn't match the pattern
-      )
-    }
+  group_by(Fund, `Spend Category`, `Cost Center`, Service) |>  # Added Service to group_by
+  summarise(
+    `Revised Budget` = sum(`Revised Budget`, na.rm = TRUE),
+    across(starts_with("Actuals_"), \(x) sum(x, na.rm = TRUE)),  # Sum Actuals columns
+    .groups = "drop"
   )
 
 # Convert actuals columns to numeric safely
 expense_report_tbl <- expense_report_tbl |> 
-  mutate(across(starts_with("Actuals_"), as.numeric, .names = "clean_{.col}"))
+  mutate(across(starts_with("Actuals_"), as.numeric))  # Ensure actuals are numeric
+
+# Rename columns to the "Month Year" format (e.g., "June 2024")
+expense_report_tbl <- expense_report_tbl |> 
+  rename_with(
+    ~ {
+      # Extract year and month part from the column name
+      date_part <- sub("^Actuals_(\\d{4})-(\\d{2})$", "\\1-\\2", .)
+      year <- sub("^(\\d{4})-(\\d{2})$", "\\1", date_part)
+      month <- as.numeric(sub("^(\\d{4})-(\\d{2})$", "\\2", date_part))
+      month_name <- month_names[month]
+      
+      # Return the formatted "Month Year"
+      paste(month_name, year)
+    },
+    starts_with("Actuals_")
+  )
 ```
 
 ## Calculating the Total Expenditures and the GL_YTD_EXP columns 
@@ -217,9 +214,9 @@ Here I am calculating the Total Expenditures and the GL_YTD_EXP columns. This wi
 ```{r newcolumns}
 # --- calculation for the Total Expenditures ---
 # Identify all month columns dynamically (only those with month-year format)
-month_cols <- names(expense_report_tbl)[str_detect(names(expense_report_tbl), "^[A-Za-z]+ \\d{4}$")]
+month_cols <- names(expense_report_tbl)[str_detect(names(expense_report_tbl), "^([A-Za-z]+ \\d{4})$")]
 
-# sum across detected month columns
+# Sum across detected month columns
 expense_report_tbl <- expense_report_tbl |> 
   mutate(`Total Expenditures` = rowSums(across(all_of(month_cols)), na.rm = TRUE))
 
@@ -228,8 +225,7 @@ gl_data_exp <- gl_data |>
   group_by(Fund, `Spend Category as Worktag`, `Cost Center`) |> 
   summarise(`GL YTD EXP` = sum(Amount, na.rm = TRUE), .groups = "drop")
 
-
-# joining the data to the expense_report_tbl
+# Joining the GL YTD data to the expense_report_tbl
 expense_report_tbl <- expense_report_tbl |> 
   left_join(gl_data_exp, 
             by = c("Spend Category" = "Spend Category as Worktag", 
@@ -257,9 +253,9 @@ month_cols_sorted <- month_cols[order(match(sub("^(\\w+).*", "\\1", month_cols),
 
 # --- create the all_expense_rep dataframe dynamically ---
 all_expense_rep <- expense_report_tbl |> 
-  arrange(`Service Name`, `Spend Category`) |> 
+  arrange(`Service`, `Spend Category`) |> 
   select(
-    `Service Name`, 
+    `Service`, 
     Fund, 
     `Cost Center`, 
     `Spend Category`, 
@@ -271,11 +267,11 @@ all_expense_rep <- expense_report_tbl |>
 
 # filter to show the summer_food_program only have to put the full name into the filter
 summer_expense_rep <- all_expense_rep |> 
-  filter(`Service Name` == "SRV0754 Summer Food Service Program")
+  filter(`Service` == "SRV0754 Summer Food Service Program")
 
 # sort data and arrange by the Fund name to show the 1001 General Fund first
 summer_expense_rep <- summer_expense_rep |> 
-  arrange(Fund, `Service Name`, `Spend Category`)
+  arrange(Fund, `Service`, `Spend Category`)
 ```
 
 4. Creating the workbook.
