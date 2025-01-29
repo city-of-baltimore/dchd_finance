@@ -159,88 +159,82 @@ message(scales::percent(nrow(mismatched_overall_expenditures)/nrow(overall_spend
 This will create the table that can be used for `754 SFSP Expense Report`. 
 
 ```{r outputtable, warning=FALSE}
-# define all expected Year-Month combinations (e.g., "2024-01" to "2024-12")
-years <- unique(sub("Actuals_", "", sub("-\\d{2}$", "", names(budg_vs_actuals)[grepl("^Actuals_", names(budg_vs_actuals))])))
+# Extract unique years dynamically from actuals columns
+years <- unique(na.omit(str_extract(names(budg_vs_actuals), "(?<=Actuals_)\\d{4}")))
+
+# Define all possible Year-Month combinations based on detected years
 months <- sprintf("%02d", 1:12)
 all_year_months <- unlist(lapply(years, function(year) paste(year, months, sep = "-")))
-                          
-# extract unique years from the dataset (from actuals columns or another source)
-# this will ensure that we are able to extract what ever years are in the dataset 
 
+# Build the expense report table dynamically
 expense_report_tbl <- budg_vs_actuals |> 
   reframe(
     'Service Name' = Service,
     Fund = Fund,
-    'Cost Center Name' = `Cost Center`,
+    'Cost Center' = `Cost Center`,
     'Spend Category' = `Spend Category`,
-    'Revised Budget' = `Revised Budget`,
+    'Revised Budget' = `Revised Budget`
   ) |> 
   # Add placeholder columns dynamically for all Year-Month combinations
   bind_cols(
     as_tibble(setNames(
       lapply(all_year_months, function(x) {
-        if (paste0("Actuals_", x) %in% names(budg_vs_actuals)) {
-          # Retain values for existing columns
-          budg_vs_actuals[[paste0("Actuals_", x)]]
+        column_name <- paste0("Actuals_", x)
+        if (column_name %in% names(budg_vs_actuals)) {
+          budg_vs_actuals[[column_name]]
         } else {
-          # Create placeholders (empty strings) for missing columns
-          rep("", nrow(budg_vs_actuals))
+          rep(NA, nrow(budg_vs_actuals))
         }
       }), paste0("Actuals_", all_year_months)
     ))
-  ) |> 
-   group_by(Fund, `Spend Category`, `Cost Center Name`) |> 
-   summarise_if(is.numeric, sum, na.rm = TRUE) |> 
-  ungroup() 
+  )
 
-# check it out and see how it looks
-print(expense_report_tbl)
-
-# rename the columns for easier reading below using the function provided
-# make the columns numeric as well
-# you will get an error because there is no data for missing months
+# Rename columns for readability with correct month names
 expense_report_tbl <- expense_report_tbl |> 
   rename_with(
     .fn = function(x) {
-      # check if column name starts with "Actuals_"
+      month_num <- as.integer(str_extract(x, "(?<=-)(\\d{2})"))
+      year_num <- str_extract(x, "(?<=Actuals_)(\\d{4})")
+      
       ifelse(
-        grepl("^Actuals_", x),
-        # extract the month part and convert it to full month name
-        str_to_title(month.name[as.integer(sub("Actuals_\\d{4}-", "", x))]),
-        # Keep other column names unchanged
-        x
+        grepl("^Actuals_", x) & !is.na(month_num) & !is.na(year_num),
+        paste0(str_to_title(month.name[month_num]), " ", year_num),
+        x  # Keep original name if it doesn't match the pattern
       )
     }
-  ) 
+  )
 
-# make the columns numeric
-expense_report_tbl[ , month.name] <- 
-  lapply(expense_report_tbl[ , month.name], function(x) as.numeric(as.character(x)))
-
-# calculating the total expenditure budget amounts
+# Convert actuals columns to numeric safely
 expense_report_tbl <- expense_report_tbl |> 
-  mutate(`Total Expenditures` = rowSums(across(July:December), na.rm = TRUE))
+  mutate(across(starts_with("Actuals_"), as.numeric, .names = "clean_{.col}"))
 ```
 
-## Calculating the GL_YTD_EXP data
-Here I am calculating the GL_YTD_EXP column by the general ledger data
+## Calculating the Total Expenditures and the GL_YTD_EXP columns 
+Here I am calculating the Total Expenditures and the GL_YTD_EXP columns. This will be automatic depending on the data that is in the dataset so you do not need to change this everytime a new month with data is added.
 
 **This will need to be double checked**
 
-```{r glytddata}
-gl_data_exp <- gl_data |>
-  group_by(Fund, `Spend Category as Worktag`, `Cost Center`) |>
-  summarise(GL_YTD_EXP = sum(Amount, na.rm = TRUE), .groups = "drop")
+```{r newcolumns}
+# --- calculation for the Total Expenditures ---
+# Identify all month columns dynamically (only those with month-year format)
+month_cols <- names(expense_report_tbl)[str_detect(names(expense_report_tbl), "^[A-Za-z]+ \\d{4}$")]
+
+# sum across detected month columns
+expense_report_tbl <- expense_report_tbl |> 
+  mutate(`Total Expenditures` = rowSums(across(all_of(month_cols)), na.rm = TRUE))
+
+# --- aggregate the GL_YTD_EXP by Fund, Spend Category, and Cost Center ---
+gl_data_exp <- gl_data |> 
+  group_by(Fund, `Spend Category as Worktag`, `Cost Center`) |> 
+  summarise(`GL YTD EXP` = sum(Amount, na.rm = TRUE), .groups = "drop")
 
 
-
-
-# remove any potential duplicates (if there are multiple rows for the same combination of Fund, Spend Category as Worktag)
-expense_report_tbl <- expense_report_tbl |>
-  left_join(tbl_unique, by = c("Spend Category" = "Spend Category as Worktag"), relationship = "one-to-one")
-
-tbl_unique <- gl_data_exp |>
-  unique()
+# joining the data to the expense_report_tbl
+expense_report_tbl <- expense_report_tbl |> 
+  left_join(gl_data_exp, 
+            by = c("Spend Category" = "Spend Category as Worktag", 
+                   "Cost Center" = "Cost Center", 
+                   "Fund" = "Fund"))
 ```
 
 ###
@@ -254,27 +248,26 @@ I am going to break it up in steps to make it easier to follow.
 3. I want to sort by the Fund column to show the general fund first then the state fund. 
 
 ```{r filteringsumprogram}
-# group the data by Service Name and arrange by Spend Category
+# --- define the fiscal year months order starting with July ---
+fiscal_year_months <- c("July", "August", "September", "October", "November", "December", 
+                        "January", "February", "March", "April", "May", "June")
+
+# --- reorder the month columns based on fiscal year order ---
+month_cols_sorted <- month_cols[order(match(sub("^(\\w+).*", "\\1", month_cols), fiscal_year_months))]
+
+# --- create the all_expense_rep dataframe dynamically ---
 all_expense_rep <- expense_report_tbl |> 
   arrange(`Service Name`, `Spend Category`) |> 
-  select(c(`Service Name`,
-            Fund, 
-           `Cost Center Name`,
-           `Spend Category`, 
-           `Revised Budget`,
-           July,
-           August,
-           September,
-           October,
-           November,
-           December,
-           January,
-           February,
-           March,
-           April,
-           May,
-           June,
-          `Total Expenditures`))
+  select(
+    `Service Name`, 
+    Fund, 
+    `Cost Center`, 
+    `Spend Category`, 
+    `Revised Budget`,
+    all_of(month_cols_sorted),  # Dynamically select all month-year columns
+    `Total Expenditures`,
+    `GL YTD EXP`
+  )
 
 # filter to show the summer_food_program only have to put the full name into the filter
 summer_expense_rep <- all_expense_rep |> 
@@ -298,7 +291,7 @@ first_row_1001gf <- which(tolower(summer_expense_rep$Fund) == "1001 general fund
   min()
 first_row_5000sf <- which(tolower(summer_expense_rep$Fund) == "5000 state grants fund") |>
   min()
-first_row_ccn <- which(tolower(summer_expense_rep$`Cost Center Name`) == tolower("CCA000347 Summer Food Service Program")) |> 
+first_row_ccn <- which(tolower(summer_expense_rep$`Cost Center`) == tolower("CCA000347 Summer Food Service Program")) |> 
   min()
 
 # --- create a workbook ---
@@ -341,7 +334,7 @@ addStyle(wb1, "Summer Expense Report", column_names_style, rows = 2, cols = 1:nc
 # reset "Service Name", "Fund", and "Cost Center Name" after first appearance
 summer_expense_rep$`Service Name` <- ""
 summer_expense_rep$Fund <- ""
-summer_expense_rep$`Cost Center Name` <- ""
+summer_expense_rep$`Cost Center` <- ""
 
 # --- assign first appearance ---
 
@@ -352,13 +345,13 @@ summer_expense_rep$Fund[first_row_1001gf] <- "1001 General Fund"
 
 summer_expense_rep$Fund[first_row_5000sf] <- "5000 State Grants Fund"
 
-summer_expense_rep$`Cost Center Name`[first_row_ccn] <- "CCA000347 Summer Food Service Program"
+summer_expense_rep$`Cost Center`[first_row_ccn] <- "CCA000347 Summer Food Service Program"
 
 # --- add blank rows ---
 
 # add blank rows after each section
 writeData(wb1, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
-          startRow = first_row_1001gf + 2, colNames = FALSE)
+          startRow = first_row_1001gf + 1, colNames = FALSE)
 
 writeData(wb1, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
           startRow = first_row_5000sf + 2, colNames = FALSE)
@@ -382,7 +375,7 @@ writeData(wb1, "Summer Expense Report",
           startRow = first_row_5000sf + 2, colNames = FALSE)
 
 # re-assign first_row_ccn value to appear after first_row_5000sf
-summer_expense_rep$`Cost Center Name`[first_row_5000sf] <- "CCA000347 Summer Food Service Program"
+summer_expense_rep$`Cost Center`[first_row_5000sf] <- "CCA000347 Summer Food Service Program"
 
 
 # --- write the rest of the data ---
@@ -391,8 +384,8 @@ summer_expense_rep$`Cost Center Name`[first_row_5000sf] <- "CCA000347 Summer Foo
 writeData(wb1, "Summer Expense Report", summer_expense_rep[(first_row_ccn + 1):nrow(summer_expense_rep), ], 
           startRow = first_row_ccn + 3, colNames = FALSE)
 
-# --- saving the workbook ---
-
+# # --- saving the workbook ---
+# 
 # save the workbook
 saveWorkbook(wb1, "summer_food_program_report.xlsx", overwrite = TRUE)
 ```
@@ -400,7 +393,7 @@ saveWorkbook(wb1, "summer_food_program_report.xlsx", overwrite = TRUE)
 5. Calculating the columns for the Analysis Table
 Create the columns that are needed for the second table that is in the `754 SFSP Expense Report`.
 
-```{r calculatingcols}
+```{r calculatingcols, warning=FALSE}
 # create a new dataframe with only the new columns included and not the rest
 # tblwhodis is a placeholder for the new calculated columns
 
@@ -410,36 +403,42 @@ tblwhodis <- summer_expense_rep |>
   mutate(
     `Revised Budget` = as.numeric(gsub("[^0-9.]", "", `Revised Budget`)),
     `GL YTD EXP` = as.numeric(gsub("[^0-9.]", "", `GL YTD EXP`)),
-    `Remaining Balance` = ifelse(is.na(`GL YTD EXP`), NA, `Revised Budget` - `GL YTD EXP`)
+    `Remaining Balance` = ifelse(
+      is.na(`Revised Budget`) | is.na(`GL YTD EXP`), 
+      NA,  # If either value is NA, set Remaining Balance to NA
+      `Revised Budget` - `GL YTD EXP`  # Subtraction if both are valid
+    )
   )
 # --- create a numerical fiscal month ---
 
-# assign each month a number (July = 1, August = 2, ..., June = 12)
-# Convert month names to fiscal months
+# Assign each month a number (July = 1, August = 2, ..., June = 12)
 month_to_fiscal <- c(
   "July" = 1, "August" = 2, "September" = 3, "October" = 4, "November" = 5, "December" = 6,
   "January" = 7, "February" = 8, "March" = 9, "April" = 10, "May" = 11, "June" = 12
 )
 
-# detect the maximum fiscal month dynamically
-# function identifies the furthest fiscal month available
+# Detect the maximum fiscal month dynamically by checking the existing months in the dataframe
+existing_months <- names(expense_report_tbl)[str_detect(names(expense_report_tbl), "^[A-Za-z]+ \\d{4}$")]
+month_names_in_data <- sub(" \\d{4}$", "", existing_months)  # Extract month names
+
+# Get the latest fiscal month from the data
 detected_month <- names(month_to_fiscal)[
-  max(which(names(expense_report_tbl) %in% names(month_to_fiscal))) 
+  max(which(month_names_in_data %in% names(month_to_fiscal))) 
 ]
 
 # --- Projected Y|E Value calculation ---
-
-# calculate the Projected Y|E Value, keeping placeholders for Jan-Jun
 tblwhodis <- tblwhodis |> 
   mutate(
-    FiscalMonth = month_to_fiscal[detected_month],  # retrieves the latest fiscal month
+    # Get the FiscalMonth based on the latest detected month
+    FiscalMonth = month_to_fiscal[detected_month],  
+    # Calculate Projected Y|E Value if both GL YTD EXP and FiscalMonth are valid
     `Projected Y|E Value` = ifelse(
       is.na(`GL YTD EXP`) | is.na(FiscalMonth), 
-      NA,  # NA for missing data
-      (`GL YTD EXP` / FiscalMonth) * 12  # Projected Year-End Value
+      NA,  # Return NA if either GL YTD EXP or FiscalMonth is missing
+      (`GL YTD EXP` / FiscalMonth) * 12  # Project the year-end value
     )
   ) |> 
-  select(everything())  # Ensures all original columns, including `Remaining Balance`, are retained
+  select(everything())  # Retain all original columns, including `Remaining Balance`
 
 # --- Sur / (Def) column ---
 
