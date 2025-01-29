@@ -19,7 +19,9 @@ In Rstudio, go to File -> New Project -> Version Control -> git -> then add the 
 
 # Documentation
 There is documentation in the Documents folder on how to use github and rstudio. Within the folder are "Cheatsheets" for Rstudio on understanding Markdown files and other coding logistics. 
+
 There is a file that details how to use the Rmarkdown file for the GL_and_Budget_vs_Actuals file and there is a file that talks about how to use Github.
+
 Make sure to click on the "View Raw" to have the file be downloaded to your downloads folder to take a look at the files.  
 
 # Deputy Plot Scripts
