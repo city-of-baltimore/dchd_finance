@@ -28,7 +28,7 @@ Reading in the files for the data that will be used. Put new data files in the "
 gl_file_name <- "GL-Operating Actual Expenses YTD 2024-12-19 13_03 EST.xlsx"
 
 budg_vs_act_file_name <- "Budget_vs_Actuals_-_BBMR YTD 2024-12-19.xlsx" 
- 
+
 # read data from files
 gl_data <- readxl::read_xlsx(here("Data", gl_file_name), 
                              skip = 13,
@@ -36,29 +36,37 @@ gl_data <- readxl::read_xlsx(here("Data", gl_file_name),
                                            "date", 
                                            rep("text",6),
                                            rep("numeric", 3),
-                                           rep("text",26)))
+                                           rep("text",26))) |> 
+  mutate(`Accounting Date` = as.Date(`Accounting Date`))
 
 
 # the first row of the data file is mostly empty except for a few important dates. 
 # read those data and do some formatting to clean up the data
-first_row_of_data <- readxl::read_xlsx(here("Data", budg_vs_act_file_name)) |> 
+first_row_of_data <- 
+  readxl::read_xlsx(here("Data", budg_vs_act_file_name)) |> 
   names() 
 
 # take out the data that is before the numeric values
-name_prefixes <- tibble(first_row_of_data) |> 
+name_prefixes <- 
+  tibble(first_row_of_data) |> 
   mutate(prefixes = ifelse(str_detect(first_row_of_data, "\\.\\."), 
-                          NA_character_, 
-                          first_row_of_data)) |> 
-fill(prefixes, .direction = "down") |> 
+                           NA_character_, 
+                           first_row_of_data)) |> 
+  fill(prefixes, .direction = "down") |> 
+  mutate(prefixes = ifelse(is.na(prefixes), 
+                           NA_character_, 
+                           paste0(prefixes, "-01"))) |> 
   pull(prefixes)
 
 # read the data file again but skip the first line
-budg_vs_actuals <- readxl::read_xlsx(here("Data", budg_vs_act_file_name),
-                  skip = 1)
+budg_vs_actuals <- 
+  readxl::read_xlsx(here("Data", budg_vs_act_file_name),
+                    skip = 1)
 
-#dropping the total budget row as this is not needed and will mess up the data
+# remove the total budget row as this is not needed 
+# and will mess up the data. 
 budg_vs_actuals <- budg_vs_actuals |> 
-  filter(`Cost Center` != "Total")
+  filter(`Cost Center` != "Total") 
 
 # the names in the file repeat themselves, but this combines the dates with the repetitive names
 for(i in seq_along(name_prefixes)){
@@ -70,6 +78,13 @@ for(i in seq_along(name_prefixes)){
            paste(plain_name,name_prefixes[i], sep = "_"))
 }
 
+
+
+# remove commitments and obligations since we dont need them
+budg_vs_actuals <- budg_vs_actuals |> 
+  select(-matches("^Commitments|^Obligations"))
+
+
  names(budg_vs_actuals)
 ```
 
@@ -79,97 +94,30 @@ I need to remove some of the rows that are not needed for the analysis. I will t
 ```{r cleaningdata}
 # add round all expenditure days to the expenditure month
 gl_data <- gl_data |> 
-  mutate(expend_month = as.Date(floor_date(`Accounting Date` , unit = "month")))
+  mutate(expend_month = floor_date(`Accounting Date` , unit = "month"))
 
-# remove columns that have nulls for all values, replace "blank" with an actual 'null' value
+# remove columns that have nulls for all values 
+# replace "blank" with an actual 'null' value
 budg_vs_actuals <- budg_vs_actuals |> 
   select_if(~sum(!is.na(.)) > 0) |> 
   mutate(Grant = ifelse(Grant == "(Blank)", NA_character_, Grant))
 
-# create a dataframe of overall expenditures by worktags from the budget vs actuals file
-budg_vs_actuals_overall <- budg_vs_actuals |> 
-  select(-matches("_")) 
-
-# create a dataframe of monthly expenditures by worktags from the  budget vs actuals file. Change the table from wide to long.
-budget_vs_Actuals_monthly <- budg_vs_actuals |> 
-  select(-matches("Budget|total",ignore.case = T)) |> 
-  pivot_longer(cols = -!matches("_"), names_to = "date_topic", values_to = "amounts") |> 
-  separate(date_topic, sep = "_", into = c("acct_category", "month")) |> mutate(month = as.Date(paste0(month,"-01")))
 ```
 
-## Monthly amounts match
-Check to see if the monthly expenditures for each categories match between the two files.
-
-```{r monthlyamnts}
-# aggregate the ledger data by month and worktags
-monthly_spendies <- gl_data |> 
-  group_by(expend_month, Fund, `Cost Center`, Grant, 
-           `Spend Category as Worktag`) |> 
-  reframe(total_spend_on_gl = sum(Amount, na.rm = T))
-
-# compare between two files
-monthly_spendies_compared <- budget_vs_Actuals_monthly |> 
-  filter(acct_category == "Actuals") |> 
-  full_join(monthly_spendies, by = c("Cost Center"="Cost Center",
-                                     "Fund"="Fund",
-                                     "Grant" = "Grant",
-                                     "Spend Category" = "Spend Category as Worktag",
-                                     "month"="expend_month")) 
-
-# filter on those where values dont match
-mismatched_monthly_expenditures <- monthly_spendies_compared |> 
-  filter(round(amounts) != round(total_spend_on_gl) ) 
-
-# creating a message to show the number of mismatched rows
-message(scales::percent(nrow(mismatched_monthly_expenditures)/nrow(monthly_spendies_compared), accuracy = .1), " of rows are mismatched")
-
-# message states that .6% of rows are mismatched
-```
-
-## Overall expenditures match
-Check to see if the total expenditures for each category match between the two files.
-
-```{r ovrexps}
-# creating new dataset from the gl_data
-overall_spendies <- gl_data |> 
-  group_by(Fund, `Cost Center`, Grant, `Spend Category as Worktag`) |> 
-  reframe(total_spend_on_gl = sum(Amount, na.rm = T),
-          number_of_lines = n())
-
-# joining the budg vs. actual overall data to the overall spendies
-overall_spendies_compared <- budg_vs_actuals_overall |> 
-    full_join(overall_spendies, by = c("Cost Center"="Cost Center",
-                                     "Fund"="Fund",
-                                     "Grant" = "Grant",
-                                     "Spend Category" = "Spend Category as Worktag")) 
-
-# rounding the total spent and filtering the data to match the variables of the total column
-mismatched_overall_expenditures <- overall_spendies_compared |> 
-  filter(round(`Total Spent` ) != round(total_spend_on_gl) ) |> 
-  mutate_at(vars(matches("total", ignore.case = T)), scales::dollar)
-
-# creating a message to show the number of rows that are mismatched
-message(scales::percent(nrow(mismatched_overall_expenditures)/nrow(overall_spendies), accuracy = .1), " are mismatched")
-
-# large amount of mismatches with the data being different for the overall expenditures. 
-# 7.8% are different.
-```
 
 ## Making an output table
 This will create the table that can be used for `754 SFSP Expense Report`. 
 
 ```{r outputtable, warning=FALSE}
-# Extract unique years dynamically from actuals columns
-years <- unique(na.omit(str_extract(names(budg_vs_actuals), "(?<=Actuals_)\\d{4}")))
 
-# Define month names dynamically
-month_names <- c("January", "February", "March", "April", "May", "June", 
-                 "July", "August", "September", "October", "November", "December")
+# find all months of fiscal year
+all_column_names <- names(budg_vs_actuals)
+month_columns <- column_names[str_detect(column_names, "Actuals_")]
+get_first_date <- as.Date(paste0(strsplit(month_columns, "_")[[1]][2],"-01"))
 
-# Ensure all actual columns exist before summarizing
-months <- sprintf("%02d", 1:12)
-all_year_months <- unlist(lapply(years, function(year) paste(year, months, sep = "-")))
+all_year_months <- seq(get_first_date, get_first_date +months(11), by = "month")
 
+# add missing months into teh table
 for (col in paste0("Actuals_", all_year_months)) {
   if (!col %in% names(budg_vs_actuals)) {
     budg_vs_actuals[[col]] <- NA_real_  # Add missing columns filled with NA
@@ -180,30 +128,19 @@ for (col in paste0("Actuals_", all_year_months)) {
 expense_report_tbl <- budg_vs_actuals |> 
   group_by(Fund, `Spend Category`, `Cost Center`, Service) |>  # Added Service to group_by
   summarise(
-    `Revised Budget` = sum(`Revised Budget`, na.rm = TRUE),
-    across(starts_with("Actuals_"), \(x) sum(x, na.rm = TRUE)),  # Sum Actuals columns
+    across(where(is.numeric), ~ sum(.x, na.rm = TRUE)),  # Sum Actuals columns
     .groups = "drop"
   )
 
-# Convert actuals columns to numeric safely
-expense_report_tbl <- expense_report_tbl |> 
-  mutate(across(starts_with("Actuals_"), as.numeric))  # Ensure actuals are numeric
 
 # Rename columns to the "Month Year" format (e.g., "June 2024")
 expense_report_tbl <- expense_report_tbl |> 
   rename_with(
-    ~ {
-      # Extract year and month part from the column name
-      date_part <- sub("^Actuals_(\\d{4})-(\\d{2})$", "\\1-\\2", .)
-      year <- sub("^(\\d{4})-(\\d{2})$", "\\1", date_part)
-      month <- as.numeric(sub("^(\\d{4})-(\\d{2})$", "\\2", date_part))
-      month_name <- month_names[month]
-      
-      # Return the formatted "Month Year"
-      paste(month_name, year)
-    },
-    starts_with("Actuals_")
-  )
+  ~ as.character(month(as.Date(gsub("Actuals_","", .x)), label = T, abbr = F)),
+  starts_with("Actuals_")
+)
+  
+
 ```
 
 ## Calculating the Total Expenditures and the GL_YTD_EXP columns 
@@ -213,12 +150,10 @@ Here I am calculating the Total Expenditures and the GL_YTD_EXP columns. This wi
 
 ```{r newcolumns}
 # --- calculation for the Total Expenditures ---
-# Identify all month columns dynamically (only those with month-year format)
-month_cols <- names(expense_report_tbl)[str_detect(names(expense_report_tbl), "^([A-Za-z]+ \\d{4})$")]
 
 # Sum across detected month columns
 expense_report_tbl <- expense_report_tbl |> 
-  mutate(`Total Expenditures` = rowSums(across(all_of(month_cols)), na.rm = TRUE))
+  mutate(`Total Expenditures` = rowSums(across(all_of(month.name)), na.rm = TRUE))
 
 # --- aggregate the GL_YTD_EXP by Fund, Spend Category, and Cost Center ---
 gl_data_exp <- gl_data |> 
@@ -244,26 +179,17 @@ I am going to break it up in steps to make it easier to follow.
 3. I want to sort by the Fund column to show the general fund first then the state fund. 
 
 ```{r filteringsumprogram}
-# --- define the fiscal year months order starting with July ---
-fiscal_year_months <- c("July", "August", "September", "October", "November", "December", 
-                        "January", "February", "March", "April", "May", "June")
-
-# --- reorder the month columns based on fiscal year order ---
-month_cols_sorted <- month_cols[order(match(sub("^(\\w+).*", "\\1", month_cols), fiscal_year_months))]
 
 # --- create the all_expense_rep dataframe dynamically ---
 all_expense_rep <- expense_report_tbl |> 
   arrange(`Service`, `Spend Category`) |> 
-  select(
-    `Service`, 
-    Fund, 
-    `Cost Center`, 
-    `Spend Category`, 
-    `Revised Budget`,
-    all_of(month_cols_sorted),  # Dynamically select all month-year columns
-    `Total Expenditures`,
-    `GL YTD EXP`
-  )
+  select(-c(
+    `Adopted Budget`,
+    `Corrections to Budget`,
+    Amendments,
+    `Total Actuals`,
+    `Total Spent`
+  ))
 
 # filter to show the summer_food_program only have to put the full name into the filter
 summer_expense_rep <- all_expense_rep |> 
