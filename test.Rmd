@@ -18,6 +18,8 @@ library(DT)
 library(openxlsx)
 library(stringr)
 library(lubridate)
+
+
 ```
 
 ## Reading in the data 
@@ -112,7 +114,7 @@ This will create the table that can be used for `754 SFSP Expense Report`.
 
 # find all months of fiscal year
 all_column_names <- names(budg_vs_actuals)
-month_columns <- column_names[str_detect(column_names, "Actuals_")]
+month_columns <- all_column_names[str_detect(all_column_names, "Actuals_")]
 get_first_date <- as.Date(paste0(strsplit(month_columns, "_")[[1]][2],"-01"))
 
 all_year_months <- seq(get_first_date, get_first_date +months(11), by = "month")
@@ -126,7 +128,7 @@ for (col in paste0("Actuals_", all_year_months)) {
 
 # Build the expense report table dynamically
 expense_report_tbl <- budg_vs_actuals |> 
-  group_by(Fund, `Spend Category`, `Cost Center`, Service) |>  # Added Service to group_by
+  group_by(Fund, `Spend Category`, `Cost Center`) |> 
   summarise(
     across(where(is.numeric), ~ sum(.x, na.rm = TRUE)),  # Sum Actuals columns
     .groups = "drop"
@@ -182,7 +184,7 @@ I am going to break it up in steps to make it easier to follow.
 
 # --- create the all_expense_rep dataframe dynamically ---
 all_expense_rep <- expense_report_tbl |> 
-  arrange(`Service`, `Spend Category`) |> 
+  arrange(Fund, `Cost Center`, `Spend Category`) |> 
   select(-c(
     `Adopted Budget`,
     `Corrections to Budget`,
@@ -193,28 +195,41 @@ all_expense_rep <- expense_report_tbl |>
 
 # filter to show the summer_food_program only have to put the full name into the filter
 summer_expense_rep <- all_expense_rep |> 
-  filter(`Service` == "SRV0754 Summer Food Service Program")
+  filter(str_detect(`Cost Center`,"Summer")) |> 
+  relocate(`Spend Category`, .after = `Cost Center`)
 
-# sort data and arrange by the Fund name to show the 1001 General Fund first
-summer_expense_rep <- summer_expense_rep |> 
-  arrange(Fund, `Service`, `Spend Category`)
 ```
 
 4. Creating the workbook.
 There is a lot going on here. So what this section is doing is creating the workbook but in sections. 
 
+
+everything after this is for styling an excel file
+
+
+
+
+
+
+
+
+
+
+
+
 ```{r workbook}
+
+
+
+summer_expense_rep |> 
+  group_by(Fund, `Cost Center`) |> 
+  mutate(row_num = row_number()) |> 
+  ungroup() |> 
+  mutate_at(vars(Fund, `Cost Center`), ~ifelse(row_num == 1, . , ""))
+
 # --- identifying the first row for the data ---
 
-# find the first row of "1001 General Fund", "5000 State Grants Fund", and the "CCA000347 Summer Food Service Program"
-first_row_sfp <- which(tolower(summer_expense_rep$`Service Name`) == tolower("SRV0754 Summer Food Service Program")) |> 
-  min()
-first_row_1001gf <- which(tolower(summer_expense_rep$Fund) == "1001 general fund") |>
-  min()
-first_row_5000sf <- which(tolower(summer_expense_rep$Fund) == "5000 state grants fund") |>
-  min()
-first_row_ccn <- which(tolower(summer_expense_rep$`Cost Center`) == tolower("CCA000347 Summer Food Service Program")) |> 
-  min()
+
 
 # --- create a workbook ---
 
@@ -251,60 +266,7 @@ column_names_style <- createStyle(
 # apply the style to the column names (first row of data)
 addStyle(wb1, "Summer Expense Report", column_names_style, rows = 2, cols = 1:ncol(summer_expense_rep), gridExpand = TRUE)
 
-# --- identify after first appearance ---
 
-# reset "Service Name", "Fund", and "Cost Center Name" after first appearance
-summer_expense_rep$`Service Name` <- ""
-summer_expense_rep$Fund <- ""
-summer_expense_rep$`Cost Center` <- ""
-
-# --- assign first appearance ---
-
-# ensure first appearance of each section is retained
-summer_expense_rep$`Service Name`[first_row_sfp] <- "SRV0754 Summer Food Service Program"
-
-summer_expense_rep$Fund[first_row_1001gf] <- "1001 General Fund"
-
-summer_expense_rep$Fund[first_row_5000sf] <- "5000 State Grants Fund"
-
-summer_expense_rep$`Cost Center`[first_row_ccn] <- "CCA000347 Summer Food Service Program"
-
-# --- add blank rows ---
-
-# add blank rows after each section
-writeData(wb1, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
-          startRow = first_row_1001gf + 1, colNames = FALSE)
-
-writeData(wb1, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
-          startRow = first_row_5000sf + 2, colNames = FALSE)
-
-writeData(wb1, "Summer Expense Report", matrix("", nrow = 1, ncol = ncol(summer_expense_rep)), 
-          startRow = first_row_ccn + 2, colNames = FALSE)
-
-# --- write Data and Format Sections ---
-
-# write data before each blank row
-writeData(wb1, "Summer Expense Report", summer_expense_rep[1:first_row_1001gf, ], colNames = TRUE, startRow = 2)
-
-writeData(wb1, "Summer Expense Report", summer_expense_rep[(first_row_1001gf + 1):first_row_5000sf, ], 
-          startRow = first_row_1001gf + 3, colNames = FALSE)
-
-writeData(wb1, "Summer Expense Report", summer_expense_rep[(first_row_5000sf + 1):first_row_ccn, ], 
-          startRow = first_row_5000sf + 3, colNames = FALSE)
-
-writeData(wb1, "Summer Expense Report", 
-          summer_expense_rep[(first_row_5000sf + 1):first_row_ccn, ], 
-          startRow = first_row_5000sf + 2, colNames = FALSE)
-
-# re-assign first_row_ccn value to appear after first_row_5000sf
-summer_expense_rep$`Cost Center`[first_row_5000sf] <- "CCA000347 Summer Food Service Program"
-
-
-# --- write the rest of the data ---
-
-# write remaining data after the last section
-writeData(wb1, "Summer Expense Report", summer_expense_rep[(first_row_ccn + 1):nrow(summer_expense_rep), ], 
-          startRow = first_row_ccn + 3, colNames = FALSE)
 
 # # --- saving the workbook ---
 # 
