@@ -18,6 +18,7 @@ library(DT)
 library(openxlsx)
 library(stringr)
 library(lubridate)
+library(hrbrthemes)
 ```
 
 ## Reading in the data 
@@ -29,12 +30,68 @@ summer_exp <- read.xlsx(here("FY 2024 Budget and Actual as of 12_31_2024.xlsx"))
 
 # set the first row as headers and remove it from the data
 summer_exp <- setNames(summer_exp[-1, ], as.character(unlist(summer_exp[1, ])))
+
+# removing unwanted columns
+summer_exp <- summer_exp|> 
+  select(-c(20:21,25))
 ```
 
-## Creating plots
-Here I want to create plots that relate to the data that we see in the table. These will be used 
 
-```{r}
+## Creating tables for the plots
+Here I want to create tables that will be used to make the plots from the Summer Food Program dataset. 
+
+```{r tables}
+# filter for these three specific spending cats only for the table
+gf_1001_tbl <- summer_exp |> 
+  filter(`Spend Category` %in% c('SC610105 - Overtime', 
+                                 'SC620201 - FICA Payroll Tax (Social Security)', 
+                                 'SC610101 - Permanent Full-Time',
+                                 'SC630307 - Printing', 
+                                 'SC630326 - Professional Services',
+                                 'SC630334 - Internet Service',
+                                 'SC630338 - Security and Alarm Services',
+                                 'SC630341 - Rental of Outside Vehicles',
+                                 'SC630363 - Elevator Service',
+                                 'SC630368 - Custodial Services',
+                                 'SC640402 - Office Supplie',
+                                 'SC650503 - Minor Computer Processing Equipment'))
+
+# general fund 1001 table 
+foo <- gf_1001_tbl |> 
+  group_by(`Spend Category`) |> 
+  mutate(`salaries/opc projections` = sum(
+    as.numeric(`SC610105 - Overtime`), 
+    as.numeric(`SC620201 - FICA Payroll Tax (Social Security)`), 
+    as.numeric(`SC610101 - Permanent Full-Time`), 
+    na.rm = TRUE
+  ))
+
+
+
+
+# general fund 1001 table
+gf_1001_tbl <- summer_exp |> 
+  mutate(`Salaries/OPC projections` = 
+           rowSums(across(c(`Spend Category` == `SC610101 - Permanent Full-Time, 
+                            `Spend Category` == `SC610105 - O 
+                           `Spend Category` == `SC620201 - FICA Payroll Tax (Social Security)`)), 
+                   na.rm = TRUE)
+         )
+
+```
+
+
+
+
+
+###
+## Creating plots
+###
+
+## General Plots
+Here I want to create plots that relate to the data that we see in the table. There will be a series of plots that will be used for this. The first plot that will be created is the General Funds 1001. 
+
+```{r creatingplots}
 
 ```
 
