@@ -13,6 +13,14 @@ Budget vs Actuals BBMR YTD
 
 GL-Operating Actual Expenses YTD
 
+All service expense rmd file
+
+Summer food program only rmd file
+
+Summer food program plots
+
+All service expense rmd plots
+
 # How to use the github repository
 Clone code from github
 In Rstudio, go to File -> New Project -> Version Control -> git -> then add the link for the github repo (repo url link), and a name for the folder that will be created. This will create an RStudio project synced with the git repo. After that's setup, then open the r file that is related to the analysis you want to run. 
