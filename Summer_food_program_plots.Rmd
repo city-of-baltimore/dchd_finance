@@ -1,5 +1,5 @@
 ---
-title: "sript"
+title: "Summer Food Program Plots"
 author: "Selenea Gibson and Jason Howard"
 date: "2025-01-23"
 output: html_document
