@@ -1,5 +1,5 @@
 ---
-title: "all_service_centers"
+title: "All Service Center Reports"
 author: "Selenea Gibson & Jason Howard"
 date: "2025-01-02"
 output: html_document
@@ -125,7 +125,7 @@ for (col in paste0("Actuals_", all_year_months)) {
 }
 
 # Build the expense report table dynamically
-expense_report_tbl <- budg_vs_actuals |> 
+all_expense_report_tbl <- budg_vs_actuals |> 
   group_by(Fund, `Spend Category`, `Cost Center`) |> 
   summarise(
     across(where(is.numeric), ~ sum(.x, na.rm = TRUE)),  # Sum Actuals columns
@@ -134,7 +134,7 @@ expense_report_tbl <- budg_vs_actuals |>
 
 
 # Rename columns to the "Month Year" format (e.g., "June 2024")
-expense_report_tbl <- expense_report_tbl |> 
+all_expense_report_tbl <- all_expense_report_tbl |> 
   rename_with(
   ~ as.character(month(as.Date(gsub("Actuals_","", .x)), label = T, abbr = F)),
   starts_with("Actuals_")
@@ -143,7 +143,7 @@ expense_report_tbl <- expense_report_tbl |>
 
 ###
 ## Calculations for gl_ytd_exp
-Calculating the gl_ytd_exp column. I will also rename the `Total Actual` column to the `Total Expenditure` column. Then join the gl table to the expense report table. 
+Calculating the gl_ytd_exp column. I will also rename the `Total Actual` column to the `Total Expenditure` column. Then join the gl table to the all expense report table. 
 
 ```{r calculations}
 # --- aggregate the GL_YTD_EXP by Fund, Spend Category, and Cost Center ---
@@ -152,8 +152,8 @@ gl_data_exp <- gl_data |>
   summarise(`GL YTD EXP` = sum(Amount, na.rm = TRUE), .groups = "drop")
 
 # --- Joining datasets ---
-# joining the GL YTD data to the expense_report_tbl
-expense_report_tbl <- expense_report_tbl |> 
+# joining the GL YTD data to the all_expense_report_tbl
+all_expense_report_tbl <- all_expense_report_tbl |> 
   left_join(gl_data_exp, 
             by = c("Spend Category" = "Spend Category as Worktag", 
                    "Cost Center" = "Cost Center", 
@@ -172,7 +172,7 @@ Creating 2 workbooks that will contain the data from the BBMR and GL report. Thi
 # --- create the all_expense_rep dataframe  ---
 
 # creating a summary table for the final output
-all_expense_rep <- expense_report_tbl |> 
+all_expense_rep <- all_expense_report_tbl |> 
   arrange(Fund, `Cost Center`, `Spend Category`) |> 
   select(-c(
     `Adopted Budget`,
@@ -187,12 +187,12 @@ Create the columns that are needed for the second table that is in the `754 SFSP
 
 ```{r calculatingcols, warning=FALSE}
 # create a new dataframe with only the new columns included and not the rest
-# tblwhodis is a placeholder for the new calculated columns
+# all_tblwhodis is a placeholder for the new calculated columns
 
 # --- calculate the Remaining Balance column ---
 
 # create a new column for the remaining balance and make the gl ytd exp numeric
-tblwhodis <- all_expense_rep |> 
+all_tblwhodis <- all_expense_rep |> 
   mutate(
     `Revised Budget` = as.numeric(gsub("[^0-9.-]", "", `Revised Budget`)),
     `GL YTD EXP` = as.numeric(gsub("[^0-9.-]", "", `GL YTD EXP`)),
@@ -210,7 +210,7 @@ latest_fiscal_month <- month(max(all_year_months, na.rm = TRUE))
 # --- Projected Y|E Value calculation ---
 
 # calculating the projected Y|E Values
-tblwhodis <- tblwhodis |> 
+all_tblwhodis <- all_tblwhodis |> 
   mutate(
     FiscalMonth = latest_fiscal_month,  
     `Projected Y|E Value` = ifelse(
@@ -224,7 +224,7 @@ tblwhodis <- tblwhodis |>
 # --- Sur / (Def) column ---
 
 # calculate the Sur / (Def) column 
-tblwhodis <- tblwhodis |>
+all_tblwhodis <- all_tblwhodis |>
   mutate(
     `Sur / (Def)` = ifelse(
       is.na(`Revised Budget`) | is.na(`Projected Y|E Value`),
@@ -238,7 +238,7 @@ tblwhodis <- tblwhodis |>
 
 # here we will make a notes column that can be used in excel
 # initialize as empty character column
-tblwhodis$Notes <- NA_character_  
+all_tblwhodis$Notes <- NA_character_  
 ```
 
 
@@ -254,7 +254,7 @@ all_expense_rep <- all_expense_rep |>
   mutate_at(vars(Fund, `Cost Center`), ~ifelse(row_num == 1, . , ""))
 
 # only keep the columns that are needed for this table
-analysis_tbl <- tblwhodis |> 
+all_analysis_tbl <- all_tblwhodis |> 
   select(`Remaining Balance`, `Projected Y|E Value`, `Sur / (Def)`, Notes)
 ```
 
@@ -303,34 +303,34 @@ Styling for the 2 wb or Analysis table.
 
 ```{r stylingforwb2}
 # only keep the columns that are needed for this table
-analysis_tbl <- tblwhodis |> 
+all_analysis_tbl <- all_tblwhodis |> 
   select(`Remaining Balance`, `Projected Y|E Value`, `Sur / (Def)`, Notes)
 
 # --- create a workbook ---
 
 # add the worksheet to the created workbook
 wb2 <- createWorkbook()
-addWorksheet(wb2, "analysis_tbl")
+addWorksheet(wb2, "all_analysis_tbl")
 
 # --- write data to the worksheet 2 ---
 
-writeData(wb2, "analysis_tbl", analysis_tbl, startRow = 2, startCol = 1, colNames = TRUE)
+writeData(wb2, "all_analysis_tbl", all_analysis_tbl, startRow = 2, startCol = 1, colNames = TRUE)
 
 # --- header for the table---
 
 # add a header, style, and color with the label "Analysis" in the first row
-writeData(wb2, "analysis_tbl", "ANALYSIS", startRow = 1, startCol = 1)
+writeData(wb2, "all_analysis_tbl", "ANALYSIS", startRow = 1, startCol = 1)
 header_style <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#C6E0B4")
 
 # merge the cells
-mergeCells(wb2, "analysis_tbl", cols = 1:ncol(analysis_tbl), rows = 1)
-addStyle(wb2, "analysis_tbl", header_style, rows = 1, cols = 1:ncol(analysis_tbl), gridExpand = TRUE)
+mergeCells(wb2, "all_analysis_tbl", cols = 1:ncol(all_analysis_tbl), rows = 1)
+addStyle(wb2, "all_analysis_tbl", header_style, rows = 1, cols = 1:ncol(all_analysis_tbl), gridExpand = TRUE)
 
 # --- align for column headers ---
 
 # center alignment for column headers
 center_style <- createStyle(halign = "center", valign = "center")
-addStyle(wb2, "analysis_tbl", center_style, rows = 2, cols = 1:ncol(analysis_tbl), gridExpand = TRUE)
+addStyle(wb2, "all_analysis_tbl", center_style, rows = 2, cols = 1:ncol(all_analysis_tbl), gridExpand = TRUE)
 
 # --- style the column names (e.g., "Remaining Balance", "Sur / (Def)", etc.) ---
 
@@ -343,12 +343,12 @@ column_names_style <- createStyle(
 )
 
 # apply the style to the column names (first row of data)
-addStyle(wb2, "analysis_tbl", column_names_style, rows = 2, cols = 1:ncol(analysis_tbl), gridExpand = TRUE)
+addStyle(wb2, "all_analysis_tbl", column_names_style, rows = 2, cols = 1:ncol(all_analysis_tbl), gridExpand = TRUE)
 
 # --- save the workbook 2 ---
 
 # saving the workbook
-saveWorkbook(wb2, "analysis_tbl.xlsx", overwrite = TRUE)
+saveWorkbook(wb2, "all_analysis_tbl.xlsx", overwrite = TRUE)
 ```
 
 
@@ -359,7 +359,7 @@ Save workbook 1 and 2 for later once we combine the data together.
 ```{r savingwb1}
 # save the workbooks
 saveWorkbook(wb1, "all_service_center_reports.xlsx", overwrite = TRUE)
-saveWorkbook(wb2, "analysis_tbl.xlsx", overwrite = TRUE)
+saveWorkbook(wb2, "all_analysis_tbl.xlsx", overwrite = TRUE)
 ```
 
 
@@ -406,18 +406,18 @@ num_cols_summer <- ncol(all_expense_rep)
 writeData(wb_combined, "tables_unite", matrix("", nrow = num_rows_summer + 2, ncol = 2), 
           startRow = 1, startCol = num_cols_summer + 1, colNames = FALSE)
 
-# --- Write the second table (analysis_tbl) with title and formatting ---
+# --- Write the second table (all_analysis_tbl) with title and formatting ---
 
 # add title for the second table
 writeData(wb_combined, "tables_unite", "Analysis Table", startRow = 1, startCol = num_cols_summer + 3)
-mergeCells(wb_combined, "tables_unite", cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(analysis_tbl)), rows = 1)
-addStyle(wb_combined, "tables_unite", title_style_analysis, rows = 1, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(analysis_tbl)), gridExpand = TRUE)
+mergeCells(wb_combined, "tables_unite", cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(all_analysis_tbl)), rows = 1)
+addStyle(wb_combined, "tables_unite", title_style_analysis, rows = 1, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(all_analysis_tbl)), gridExpand = TRUE)
 
 # write the second table
-writeData(wb_combined, "tables_unite", analysis_tbl, startRow = 2, startCol = num_cols_summer + 3, colNames = TRUE)
+writeData(wb_combined, "tables_unite", all_analysis_tbl, startRow = 2, startCol = num_cols_summer + 3, colNames = TRUE)
 
 # apply column header style to the second table
-addStyle(wb_combined, "tables_unite", header_style_analysis, rows = 2, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(analysis_tbl)), gridExpand = TRUE)
+addStyle(wb_combined, "tables_unite", header_style_analysis, rows = 2, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(all_analysis_tbl)), gridExpand = TRUE)
 
 # --- save the combined workbook ---
 
