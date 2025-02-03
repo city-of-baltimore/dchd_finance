@@ -1,0 +1,446 @@
+---
+title: "all_service_centers"
+author: "Selenea Gibson & Jason Howard"
+date: "2025-01-02"
+output: html_document
+---
+
+# Project Overview
+This markdown file will use the DHCD Finance dept documents that are for reporting expenditures and GL data. The data is collected from Workday.
+
+```{r libraries, warning=FALSE, message=TRUE}
+# libraries for data analysis
+library(dplyr)
+library(here)
+library(tidyverse)
+library(scales)
+library(DT)
+library(openxlsx)
+library(stringr)
+library(lubridate)
+```
+
+## Reading in the data 
+Reading in the files for the data that will be used. Put new data files in the "Data" folder and replace the file names below with the names of the new files.
+
+```{r data}
+# change the names of these files to represent the newest file downloaded
+gl_file_name <- "GL-Operating Actual Expenses YTD 2024-12-19 13_03 EST.xlsx"
+
+budg_vs_act_file_name <- "Budget_vs_Actuals_-_BBMR YTD 2024-12-19.xlsx" 
+
+# read data from files
+gl_data <- readxl::read_xlsx(here("Data", gl_file_name), 
+                             skip = 13,
+                             col_types = c(rep("text",2),   
+                                           "date", 
+                                           rep("text",6),
+                                           rep("numeric", 3),
+                                           rep("text",26))) |> 
+  mutate(`Accounting Date` = as.Date(`Accounting Date`))
+
+
+# the first row of the data file is mostly empty except for a few important dates. 
+# read those data and do some formatting to clean up the data
+first_row_of_data <- 
+  readxl::read_xlsx(here("Data", budg_vs_act_file_name)) |> 
+  names() 
+
+# take out the data that is before the numeric values
+name_prefixes <- 
+  tibble(first_row_of_data) |> 
+  mutate(prefixes = ifelse(str_detect(first_row_of_data, "\\.\\."), 
+                           NA_character_, 
+                           first_row_of_data)) |> 
+  fill(prefixes, .direction = "down") |> 
+  mutate(prefixes = ifelse(is.na(prefixes), 
+                           NA_character_, 
+                           paste0(prefixes, "-01"))) |> 
+  pull(prefixes)
+
+# read the data file again but skip the first line
+budg_vs_actuals <- 
+  readxl::read_xlsx(here("Data", budg_vs_act_file_name),
+                    skip = 1)
+
+# remove the total budget row as this is not needed 
+# and will mess up the data. 
+budg_vs_actuals <- budg_vs_actuals |> 
+  filter(`Cost Center` != "Total") 
+
+# the names in the file repeat themselves, but this combines the dates with the repetitive names
+for(i in seq_along(name_prefixes)){
+  plain_name <- gsub("\\.\\..*","", names(budg_vs_actuals)[i]) 
+  
+  names(budg_vs_actuals)[i] <- 
+    ifelse(is.na(name_prefixes[i]) & str_length(plain_name) > 0,
+           plain_name,
+           paste(plain_name,name_prefixes[i], sep = "_"))
+}
+
+
+
+# remove commitments and obligations since we dont need them
+budg_vs_actuals <- budg_vs_actuals |> 
+  select(-matches("^Commitments|^Obligations"))
+
+
+ names(budg_vs_actuals)
+```
+
+## Cleaning the datasets
+I need to remove some of the rows that are not needed for the analysis. I will then make the new row be the header row. 
+
+```{r cleaningdata}
+# add round all expenditure days to the expenditure month
+gl_data <- gl_data |> 
+  mutate(expend_month = floor_date(`Accounting Date` , unit = "month"))
+
+# remove columns that have nulls for all values 
+# replace "blank" with an actual 'null' value
+budg_vs_actuals <- budg_vs_actuals |> 
+  select_if(~sum(!is.na(.)) > 0) |> 
+  mutate(Grant = ifelse(Grant == "(Blank)", NA_character_, Grant))
+
+```
+
+####
+## Creating the fiscal months
+This will create the fiscal months and year that can be used for `754 SFSP Expense Report`. 
+
+```{r, warning=FALSE}
+# -- identifying the months of the fiscal year ---
+# find all months of fiscal year
+all_column_names <- names(budg_vs_actuals)
+month_columns <- all_column_names[str_detect(all_column_names, "Actuals_")]
+get_first_date <- as.Date(paste0(strsplit(month_columns, "_")[[1]][2],"-01"))
+all_year_months <- seq(get_first_date, get_first_date +months(11), by = "month")
+
+# --- placeholders for the missing months ---
+# add missing months into the table
+for (col in paste0("Actuals_", all_year_months)) {
+  if (!col %in% names(budg_vs_actuals)) {
+    budg_vs_actuals[[col]] <- NA_real_  # Add missing columns filled with NA
+  }
+}
+
+# Build the expense report table dynamically
+expense_report_tbl <- budg_vs_actuals |> 
+  group_by(Fund, `Spend Category`, `Cost Center`) |> 
+  summarise(
+    across(where(is.numeric), ~ sum(.x, na.rm = TRUE)),  # Sum Actuals columns
+    .groups = "drop"
+  )
+
+
+# Rename columns to the "Month Year" format (e.g., "June 2024")
+expense_report_tbl <- expense_report_tbl |> 
+  rename_with(
+  ~ as.character(month(as.Date(gsub("Actuals_","", .x)), label = T, abbr = F)),
+  starts_with("Actuals_")
+)
+```
+
+###
+## Calculations for gl_ytd_exp
+Calculating the gl_ytd_exp column. I will also rename the `Total Actual` column to the `Total Expenditure` column. Then join the gl table to the expense report table. 
+
+```{r calculations}
+# --- aggregate the GL_YTD_EXP by Fund, Spend Category, and Cost Center ---
+gl_data_exp <- gl_data |> 
+  group_by(Fund, `Spend Category as Worktag`, `Cost Center`) |> 
+  summarise(`GL YTD EXP` = sum(Amount, na.rm = TRUE), .groups = "drop")
+
+# --- Joining datasets ---
+# joining the GL YTD data to the expense_report_tbl
+expense_report_tbl <- expense_report_tbl |> 
+  left_join(gl_data_exp, 
+            by = c("Spend Category" = "Spend Category as Worktag", 
+                   "Cost Center" = "Cost Center", 
+                   "Fund" = "Fund")) |> 
+  rename(`Total Expenditures` = `Total Actuals`) |> 
+  mutate(`GL YTD EXP` = if_else(is.na(`GL YTD EXP`), 0, `GL YTD EXP`)) 
+```
+
+###
+## Creating the workbooks for Excel 
+Creating 2 workbooks that will contain the data from the BBMR and GL report. This will be used to create the final product for the `754 SFSP Expense Report` table. 
+
+1. Create the summary table that houses all of the expense report data.
+
+```{r filteringsumprogram}
+# --- create the all_expense_rep dataframe  ---
+
+# creating a summary table for the final output
+all_expense_rep <- expense_report_tbl |> 
+  arrange(Fund, `Cost Center`, `Spend Category`) |> 
+  select(-c(
+    `Adopted Budget`,
+    `Corrections to Budget`,
+    Amendments,
+    `Total Spent`
+  ))
+```
+
+2. Calculating the columns for the Analysis Table
+Create the columns that are needed for the second table that is in the `754 SFSP Expense Report`.
+
+```{r calculatingcols, warning=FALSE}
+# create a new dataframe with only the new columns included and not the rest
+# tblwhodis is a placeholder for the new calculated columns
+
+# --- calculate the Remaining Balance column ---
+
+# create a new column for the remaining balance and make the gl ytd exp numeric
+tblwhodis <- all_expense_rep |> 
+  mutate(
+    `Revised Budget` = as.numeric(gsub("[^0-9.-]", "", `Revised Budget`)),
+    `GL YTD EXP` = as.numeric(gsub("[^0-9.-]", "", `GL YTD EXP`)),
+    `Remaining Balance` = ifelse(
+      is.na(`Revised Budget`) | is.na(`GL YTD EXP`), 
+      NA,  
+      `Revised Budget` - `GL YTD EXP`  
+    )
+  )
+
+# --- create a numerical fiscal month ---
+
+latest_fiscal_month <- month(max(all_year_months, na.rm = TRUE)) 
+
+# --- Projected Y|E Value calculation ---
+
+# calculating the projected Y|E Values
+tblwhodis <- tblwhodis |> 
+  mutate(
+    FiscalMonth = latest_fiscal_month,  
+    `Projected Y|E Value` = ifelse(
+      is.na(`GL YTD EXP`) | is.na(FiscalMonth), 
+      NA,  
+      (`GL YTD EXP` / FiscalMonth) * 12  
+    )
+  ) |> 
+  select(-FiscalMonth)  # Drop FiscalMonth column while keeping everything else
+
+# --- Sur / (Def) column ---
+
+# calculate the Sur / (Def) column 
+tblwhodis <- tblwhodis |>
+  mutate(
+    `Sur / (Def)` = ifelse(
+      is.na(`Revised Budget`) | is.na(`Projected Y|E Value`),
+      NA,  
+      `Revised Budget` - `Projected Y|E Value`  
+    )
+  )
+
+
+# --- Notes column ---# ---`Projected Y|E Value` Notes column ---
+
+# here we will make a notes column that can be used in excel
+# initialize as empty character column
+tblwhodis$Notes <- NA_character_  
+```
+
+
+###
+## Create the Excel workbook for wb1 and wb2
+Creating wb1 for the all service centers and wb2 for the analysis table.
+
+```{r wbs}
+all_expense_rep <- all_expense_rep |> 
+  group_by(Fund, `Cost Center`) |> 
+  mutate(row_num = row_number()) |> 
+  ungroup() |> 
+  mutate_at(vars(Fund, `Cost Center`), ~ifelse(row_num == 1, . , ""))
+
+# only keep the columns that are needed for this table
+analysis_tbl <- tblwhodis |> 
+  select(`Remaining Balance`, `Projected Y|E Value`, `Sur / (Def)`, Notes)
+```
+
+###
+## Styling for the Excel workbooks
+This will create the styling for the 2 wbs. The All Service Centers Report and the Analysis Table.
+
+```{r stylingforwb1}
+# --- create a workbook ---
+
+# add the worksheet to the created workbook
+wb1 <- createWorkbook()
+addWorksheet(wb1, "All Service Centers Report")
+
+# --- add Title (Row 1) ---
+
+# add a header, style, and color with the label "Service Centers" in the first row
+writeData(wb1, "All Service Centers Report", "FY 2024 Budget and Actual as of 07/31/2024", startRow = 1, startCol = 1)
+header_style <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#ED7D31")
+
+# merge the cells
+mergeCells(wb1, "All Service Centers Report", cols = 1:ncol(all_expense_rep), rows = 1)
+addStyle(wb1, "All Service Centers Report", header_style, rows = 1, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
+
+# --- align for column headers ---
+
+# center alignment for column headers
+center_style <- createStyle(halign = "center", valign = "center")
+addStyle(wb1, "All Service Centers Report", center_style, rows = 2, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
+
+# --- style the column names (e.g., "Service Name", "Fund", etc.) ---
+
+# styling the column names for the datatable
+column_names_style <- createStyle(
+  halign = "center", 
+  valign = "center", 
+  textDecoration = "bold", 
+  fgFill = "#ED7D31" 
+)
+
+# apply the style to the column names (first row of data)
+addStyle(wb1, "All Service Centers Report", column_names_style, rows = 2, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
+```
+
+Styling for the 2 wb or Analysis table.
+
+```{r stylingforwb2}
+# only keep the columns that are needed for this table
+analysis_tbl <- tblwhodis |> 
+  select(`Remaining Balance`, `Projected Y|E Value`, `Sur / (Def)`, Notes)
+
+# --- create a workbook ---
+
+# add the worksheet to the created workbook
+wb2 <- createWorkbook()
+addWorksheet(wb2, "analysis_tbl")
+
+# --- write data to the worksheet 2 ---
+
+writeData(wb2, "analysis_tbl", analysis_tbl, startRow = 2, startCol = 1, colNames = TRUE)
+
+# --- header for the table---
+
+# add a header, style, and color with the label "Analysis" in the first row
+writeData(wb2, "analysis_tbl", "ANALYSIS", startRow = 1, startCol = 1)
+header_style <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#C6E0B4")
+
+# merge the cells
+mergeCells(wb2, "analysis_tbl", cols = 1:ncol(analysis_tbl), rows = 1)
+addStyle(wb2, "analysis_tbl", header_style, rows = 1, cols = 1:ncol(analysis_tbl), gridExpand = TRUE)
+
+# --- align for column headers ---
+
+# center alignment for column headers
+center_style <- createStyle(halign = "center", valign = "center")
+addStyle(wb2, "analysis_tbl", center_style, rows = 2, cols = 1:ncol(analysis_tbl), gridExpand = TRUE)
+
+# --- style the column names (e.g., "Remaining Balance", "Sur / (Def)", etc.) ---
+
+# styling the column names for the datatable
+column_names_style <- createStyle(
+  halign = "center", 
+  valign = "center", 
+  textDecoration = "bold", 
+  fgFill = "#C6E0B4" 
+)
+
+# apply the style to the column names (first row of data)
+addStyle(wb2, "analysis_tbl", column_names_style, rows = 2, cols = 1:ncol(analysis_tbl), gridExpand = TRUE)
+
+# --- save the workbook 2 ---
+
+# saving the workbook
+saveWorkbook(wb2, "analysis_tbl.xlsx", overwrite = TRUE)
+```
+
+
+###
+## Saving workbooks
+Save workbook 1 and 2 for later once we combine the data together.
+
+```{r savingwb1}
+# save the workbooks
+saveWorkbook(wb1, "all_service_center_reports.xlsx", overwrite = TRUE)
+saveWorkbook(wb2, "analysis_tbl.xlsx", overwrite = TRUE)
+```
+
+
+###
+## Combining the workbooks
+Last step, "Whew!", is to join the two of these workbooks together to have 1 full working workbook that can be used for the team. 
+
+```{r combiningwbs}
+# --- combine the two workbooks on the same worksheet with full formatting ---
+
+# create a new workbook for the combined data
+wb_combined <- createWorkbook()
+
+# add a worksheet for combined data
+addWorksheet(wb_combined, "tables_unite")
+
+# define styles
+title_style_summer <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#FFA500", fontSize = 11)
+title_style_analysis <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#C6E0B4", fontSize = 11)
+
+header_style_summer <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#FFA500")
+header_style_analysis <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#C6E0B4")
+
+# --- write the first table (all_expense_rep) with title and formatting ---
+
+# add title for the first table
+writeData(wb_combined, "tables_unite", "All Service Centers Report", startRow = 1, startCol = 1)
+mergeCells(wb_combined, "tables_unite", cols = 1:ncol(all_expense_rep), rows = 1)
+addStyle(wb_combined, "tables_unite", title_style_summer, rows = 1, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
+
+# write the first table
+writeData(wb_combined, "tables_unite", all_expense_rep, startRow = 2, startCol = 1, colNames = TRUE)
+
+# apply column header style to the first table
+addStyle(wb_combined, "tables_unite", header_style_summer, rows = 2, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
+
+# --- add 2 blank columns for separation ---
+
+# count the number of rows and columns
+num_rows_summer <- nrow(all_expense_rep)
+num_cols_summer <- ncol(all_expense_rep)
+
+# write blank columns for separation
+writeData(wb_combined, "tables_unite", matrix("", nrow = num_rows_summer + 2, ncol = 2), 
+          startRow = 1, startCol = num_cols_summer + 1, colNames = FALSE)
+
+# --- Write the second table (analysis_tbl) with title and formatting ---
+
+# add title for the second table
+writeData(wb_combined, "tables_unite", "Analysis Table", startRow = 1, startCol = num_cols_summer + 3)
+mergeCells(wb_combined, "tables_unite", cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(analysis_tbl)), rows = 1)
+addStyle(wb_combined, "tables_unite", title_style_analysis, rows = 1, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(analysis_tbl)), gridExpand = TRUE)
+
+# write the second table
+writeData(wb_combined, "tables_unite", analysis_tbl, startRow = 2, startCol = num_cols_summer + 3, colNames = TRUE)
+
+# apply column header style to the second table
+addStyle(wb_combined, "tables_unite", header_style_analysis, rows = 2, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(analysis_tbl)), gridExpand = TRUE)
+
+# --- save the combined workbook ---
+
+# saving the workbook
+# r does not like slashes so you need to do underscores
+# update the name of the output file as needed
+saveWorkbook(wb_combined, "All Service Centers as of 12_31_2024.xlsx", overwrite = TRUE) # change the name of the output file accordingly
+```
+
+#### YOU DID IT ####
+Congratulations! You did a wonderful job coding! 
+If this is your first real coding script, then I must say you choose a tricky script. 
+Go ahead and call yourself a Rstudio programmer you data analyst!
+
+
+
+
+
+
+
+
+
+
+
+
+
