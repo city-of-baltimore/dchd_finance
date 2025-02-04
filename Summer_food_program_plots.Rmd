@@ -6,7 +6,7 @@ output: html_document
 ---
 
 # Project Overview
-This markdown file will use the DHCD Finance dept data to calculate the columns that are provided from the `754 SFSP Expense Report`. There will be a series of plots to make the tables at the bottom of the report more appealing for what is being shown. This will be done through visuals 
+This markdown file will use the DHCD Finance dept data to calculate the columns that are provided from the `754 SFSP Expense Report`. There will be a series of plots to make the tables at the bottom of the report more appealing for what is being shown. This will be done through visuals.
 
 ```{r libraries, warning=FALSE, message=TRUE}
 # libraries for data analysis
@@ -26,59 +26,455 @@ Reading in the files for the data that will be used for creating the plots that 
 
 ```{r readingdata}
 # reading in the dataset for the summer_expense_report
-summer_exp <- read.xlsx(here("FY 2024 Budget and Actual as of 12_31_2024.xlsx"))
+bud_vs_actuals <- read.xlsx(here("FY 2024 Budget and Actual as of 12_31_2024.xlsx"))
 
 # set the first row as headers and remove it from the data
-summer_exp <- setNames(summer_exp[-1, ], as.character(unlist(summer_exp[1, ])))
-
-# removing unwanted columns
-summer_exp <- summer_exp|> 
-  select(-c(20:21,25))
+bud_vs_actuals <- setNames(bud_vs_actuals[-1, ], as.character(unlist(bud_vs_actuals[1, ])))
 ```
 
-
+####
 ## Creating tables for the plots
-Here I want to create tables that will be used to make the plots from the Summer Food Program dataset. 
+Creating the calculations for the tables. There will be a total of 10 tables that are from the `745 Expense Report`. 
 
-```{r tables}
-# filter for these three specific spending cats only for the table
-gf_1001_tbl <- summer_exp |> 
-  filter(`Spend Category` %in% c('SC610105 - Overtime', 
-                                 'SC620201 - FICA Payroll Tax (Social Security)', 
-                                 'SC610101 - Permanent Full-Time',
-                                 'SC630307 - Printing', 
-                                 'SC630326 - Professional Services',
-                                 'SC630334 - Internet Service',
-                                 'SC630338 - Security and Alarm Services',
-                                 'SC630341 - Rental of Outside Vehicles',
-                                 'SC630363 - Elevator Service',
-                                 'SC630368 - Custodial Services',
-                                 'SC640402 - Office Supplie',
-                                 'SC650503 - Minor Computer Processing Equipment'))
+*First calculations include the Revised Budget calculations*
+*Second calculations include the GL_YTD_EXP calculations*
+*Third calculations include the Analysis Table*
+####
 
-# general fund 1001 table 
-foo <- gf_1001_tbl |> 
+### General Funds 1001 Table
+
+```{r slicingfirst, warning=FALSE}
+# --- slicing the rows for the analysis ---
+
+# slice the rows that I want for the analysis that uses the 1001 General Funds values only 
+gf_first_rows  <-  bud_vs_actuals |> 
+  slice(1:2) 
+
+gf_remaining_rows <- bud_vs_actuals |> 
+  slice(3:11)
+
+# --- grouping by the spend cat and making a new column ---
+
+gf_first_sum <- gf_first_rows |> 
   group_by(`Spend Category`) |> 
-  mutate(`salaries/opc projections` = sum(
-    as.numeric(`SC610105 - Overtime`), 
-    as.numeric(`SC620201 - FICA Payroll Tax (Social Security)`), 
-    as.numeric(`SC610101 - Permanent Full-Time`), 
-    na.rm = TRUE
-  ))
+  summarise(`salaries/opc projections` = sum(as.numeric(`Revised Budget`), na.rm = TRUE)) |> 
+  ungroup()
+
+gf_remaining_sum <- gf_remaining_rows |> 
+  group_by(`Spend Category`) |> 
+  summarise(`Other EXP projection` = sum(as.numeric(`Revised Budget`), na.rm = TRUE)) |> 
+  ungroup()
+
+# --- bind the rows together ---
+
+gf_summary <- bind_rows(gf_first_sum, gf_remaining_sum) 
+
+# --- create the final table --- 
+
+# this will be use to plot the data at the end in the plotting section.
+
+gf_final_tbl <- gf_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(`salaries/opc projections`, na.rm = TRUE),
+    `Other EXP Projections` = sum(`Other EXP projection`, na.rm = TRUE),
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
+  )
+```
 
 
+### Other Funds - 2089, 4000, and 5000 table
 
+```{r slicingsecond, warning=FALSE}
+# --- slicing the rows for the analysis ---
 
-# general fund 1001 table
-gf_1001_tbl <- summer_exp |> 
-  mutate(`Salaries/OPC projections` = 
-           rowSums(across(c(`Spend Category` == `SC610101 - Permanent Full-Time, 
-                            `Spend Category` == `SC610105 - O 
-                           `Spend Category` == `SC620201 - FICA Payroll Tax (Social Security)`)), 
-                   na.rm = TRUE)
-         )
+# slice the rows that use the 5000 State Grant values only 
+sg_first_rows  <- bud_vs_actuals |> 
+  slice(12:25) 
+
+sg_remaining_rows <- bud_vs_actuals |> 
+  slice(26:51)
+
+# --- grouping by Spend Category and summarizing ---
+
+sg_first_sum <- sg_first_rows |> 
+  group_by(`Spend Category`) |> 
+  summarise(`salaries/opc projections` = sum(as.numeric(`Revised Budget`), na.rm = TRUE)) |> 
+  ungroup()
+
+sg_remaining_sum <- sg_remaining_rows |> 
+  group_by(`Spend Category`) |> 
+  summarise(`Other EXP projection` = sum(as.numeric(`Revised Budget`), na.rm = TRUE)) |> 
+  ungroup()
+
+# --- bind the rows together ---
+
+sg_summary <- bind_rows(sg_first_sum, sg_remaining_sum) 
+
+# --- create the final summary table for plotting ---
+
+sg_final_tbl <- sg_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(`salaries/opc projections`, na.rm = TRUE),
+    `Other EXP Projections` = sum(`Other EXP projection`, na.rm = TRUE),
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
+  )
 
 ```
+
+
+### Total Projections equals to row 268 
+
+```{r tpetblone, warning=FALSE}
+# --- bind the rows together ---
+
+tpe_summary <- bind_rows(gf_final_tbl, sg_final_tbl)
+
+# --- create the tpe table --- 
+
+tpe <- tpe_summary |> 
+  summarise(`Salaries/OPC Projections` = sum(`Salaries/OPC Projections`, na.rm = TRUE))
+
+# --- create the tpe_rb_final_tbl table ---
+
+tpe_rb_final_tbl <- tpe_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(as.numeric(`Salaries/OPC Projections`), na.rm = TRUE),
+    `Other EXP Projections` = sum(as.numeric(`Other EXP Projections`), na.rm = TRUE),
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
+  )
+```
+
+
+### GL_YTD_EXP Tables
+*Second calculations include the GL_YTD_EXP calculations*
+
+### GL_YTD_EXP General Funds 1001 Table
+This is for the GL_YTD_EXP Tables.
+
+```{r gfgly, warning=FALSE}
+# --- grouping by Spend Category and summarizing ---
+
+glytd_gf_first_sum <- gf_first_rows |> 
+  group_by(`Spend Category`) |> 
+  summarise(`salaries/opc projections` = sum(as.numeric(`GL YTD EXP`), na.rm = TRUE)) |> 
+  ungroup()
+
+glytd_gf_remaining_sum <- gf_remaining_rows |> 
+  group_by(`Spend Category`) |> 
+  summarise(`Other EXP projection` = sum(as.numeric(`GL YTD EXP`), na.rm = TRUE)) |> 
+  ungroup()
+
+# --- bind the rows together ---
+
+glytd_gf_summary <- bind_rows(glytd_gf_first_sum, glytd_gf_remaining_sum) 
+
+# --- create the final summary table for plotting ---
+
+glytd_gf_final_tbl <- glytd_gf_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(`salaries/opc projections`, na.rm = TRUE),
+    `Other EXP Projections` = sum(`Other EXP projection`, na.rm = TRUE),
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
+  )
+
+```
+
+
+### Other Funds - 2089, 4000, and 5000 table
+This is for the GL_YTD_EXP Tables.
+
+```{r ofgl, warning=FALSE}
+# --- grouping by the spend cat and making a new column ---
+
+glytd_sg_first_sum <- sg_first_rows |> 
+  group_by(`Spend Category`) |> 
+  mutate(
+    `salaries/opc projections` = sum(as.numeric(`GL YTD EXP`), na.rm = TRUE)
+  ) |> 
+  ungroup() 
+  
+glytd_sg_remaining_sum <- sg_remaining_rows |> 
+  group_by(`Spend Category`) |> 
+  mutate(
+    `Other EXP projection` = sum(as.numeric(`GL YTD EXP`), na.rm = TRUE)
+  ) |> 
+  ungroup() 
+
+# --- bind the rows together ---
+
+glytd_sg_summary <- bind_rows(glytd_sg_first_sum, glytd_sg_remaining_sum) 
+
+# --- create the final table --- 
+
+# this will be use to plot the data at the end in the plotting section.
+
+glytd_sg_final_tbl <- glytd_sg_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(`salaries/opc projections`, na.rm = TRUE),
+    `Other EXP Projections` = sum(`Other EXP projection`, na.rm = TRUE),
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
+  )
+```
+
+
+### Total Projections equals to row 268 
+This is for the GL_YTD_EXP Tables.
+
+```{r tpetwo, warning=FALSE}
+# --- bind the rows together ---
+
+glytd_tpe_summary <- bind_rows(glytd_gf_final_tbl, glytd_sg_final_tbl) 
+
+# --- create the final TPE summary table for plotting ---
+
+glytd_tpe_final_tbl <- glytd_tpe_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(`Salaries/OPC Projections`, na.rm = TRUE),
+    `Other EXP Projections` = sum(`Other EXP Projections`, na.rm = TRUE),
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
+  )
+```
+
+
+*Third calculations include the Analysis Table*
+
+### General Funds 1001 Table
+This is for the Analysis Tables.
+
+```{r antblone, warning=FALSE}
+
+# --- grouping by Spend Category and summarizing ---
+
+alysgf_first_sum <- gf_first_rows |> 
+  group_by(`Spend Category`) |> 
+  summarise(
+    `Remaining Balance - Salaries/OPC` = sum(as.numeric(`Remaining Balance`), na.rm = TRUE),
+    `Projected YE Value - Salaries/OPC` = sum(as.numeric(`Projected Y|E Value`), na.rm = TRUE),
+    `Sur/(Def) - Salaries/OPC` = sum(as.numeric(`Sur / (Def)`), na.rm = TRUE)
+  ) |> 
+  ungroup()
+
+alysgf_remaining_sum <- gf_remaining_rows |> 
+  group_by(`Spend Category`) |> 
+  summarise(
+    `Remaining Balance - Other EXP` = sum(as.numeric(`Remaining Balance`), na.rm = TRUE),
+    `Projected YE Value - Other EXP` = sum(as.numeric(`Projected Y|E Value`), na.rm = TRUE),
+    `Sur/(Def) - Other EXP` = sum(as.numeric(`Sur / (Def)`), na.rm = TRUE)
+  ) |> 
+  ungroup()
+
+# --- bind the rows together ---
+
+alysgf_summary <- bind_rows(alysgf_first_sum, alysgf_remaining_sum) 
+
+# --- create the final table for plotting ---
+
+alysgf_final_tbl <- alysgf_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(`Remaining Balance - Salaries/OPC`, na.rm = TRUE) +
+                                 sum(`Projected YE Value - Salaries/OPC`, na.rm = TRUE) +
+                                 sum(`Sur/(Def) - Salaries/OPC`, na.rm = TRUE),
+    
+    `Other EXP Projections` = sum(`Remaining Balance - Other EXP`, na.rm = TRUE) +
+                              sum(`Projected YE Value - Other EXP`, na.rm = TRUE) +
+                              sum(`Sur/(Def) - Other EXP`, na.rm = TRUE),
+    
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
+  )
+```
+
+
+### Other Funds - 2089, 4000, and 5000 table
+This is for the Analysis Tables.
+
+```{r tblothfunan, warning=FALSE}
+# --- grouping by Spend Category and summarizing ---
+
+alysg_first_sum <- sg_first_rows |> 
+  group_by(`Spend Category`) |> 
+  summarise(
+    `Remaining Balance - Salaries/OPC` = sum(as.numeric(`Remaining Balance`), na.rm = TRUE),
+    `Projected YE Value - Salaries/OPC` = sum(as.numeric(`Projected Y|E Value`), na.rm = TRUE),
+    `Sur/(Def) - Salaries/OPC` = sum(as.numeric(`Sur / (Def)`), na.rm = TRUE)
+  ) |> 
+  ungroup()
+
+alysg_remaining_sum <- sg_remaining_rows |>  # Fixed incorrect reference
+  group_by(`Spend Category`) |> 
+  summarise(
+    `Remaining Balance - Other EXP` = sum(as.numeric(`Remaining Balance`), na.rm = TRUE),
+    `Projected YE Value - Other EXP` = sum(as.numeric(`Projected Y|E Value`), na.rm = TRUE),
+    `Sur/(Def) - Other EXP` = sum(as.numeric(`Sur / (Def)`), na.rm = TRUE)
+  ) |> 
+  ungroup()  
+
+# --- bind the rows together ---
+
+alysg_summary <- bind_rows(alysg_first_sum, alysg_remaining_sum) 
+
+# --- create the final table for plotting ---
+
+alysg_final_tbl <- alysg_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(`Remaining Balance - Salaries/OPC`, na.rm = TRUE) +
+                                 sum(`Projected YE Value - Salaries/OPC`, na.rm = TRUE) +
+                                 sum(`Sur/(Def) - Salaries/OPC`, na.rm = TRUE),
+    
+    `Other EXP Projections` = sum(`Remaining Balance - Other EXP`, na.rm = TRUE) +
+                              sum(`Projected YE Value - Other EXP`, na.rm = TRUE) +
+                              sum(`Sur/(Def) - Other EXP`, na.rm = TRUE),
+    
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
+  )
+```
+
+
+### Total Projections equals to row 268 
+This is for the Analysis Tables.
+
+```{r antpe, warning=FALSE}
+# --- bind the rows together ---
+
+alys_tpe_summary <- bind_rows(alysgf_final_tbl, alysg_final_tbl) 
+
+# --- create the final TPE table ---
+
+alys_tpe_final_tbl <- alys_tpe_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(as.numeric(`Salaries/OPC Projections`), na.rm = TRUE),
+    `Other EXP Projections` = sum(as.numeric(`Other EXP Projections`), na.rm = TRUE),
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
+  )
+```
+
+####
+### Percentage Calculations
+Here is a table that will calculate the percentages for the Percentage of Budget Depleted YTD Table.
+
+Using the `pull` function which ensures a single numeric value is extracted rather than a dataframe column.
+
+```{r percentages, warning=FALSE}
+pcnt_final_tbl <- tibble(
+  `Total Salaries` = round((pull(glytd_tpe_final_tbl, `Salaries/OPC Projections`)) / 
+                           (pull(tpe_rb_final_tbl, `Salaries/OPC Projections`)) * 100, 0), # ensures that the output is rounded to the next whole num
+  `Total Expenses` = round((pull(glytd_tpe_final_tbl, `Other EXP Projections`)) / 
+                           (pull(tpe_rb_final_tbl, `Other EXP Projections`)) * 100, 0),
+  `Overall Total`  = round((pull(glytd_tpe_final_tbl, `Total Projections`)) / 
+                           (pull(tpe_rb_final_tbl, `Total Projections`)) * 100, 0)
+)
+```
+
+
+
+
+#####
+### Plotting the data for visulzations
+#####
+
+The tables that have the name `final` in them will be used for the plots. These plots will serve as a way to make the data represent what the tables are showing within the main dataset. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
