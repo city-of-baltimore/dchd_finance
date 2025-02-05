@@ -19,6 +19,7 @@ library(openxlsx)
 library(stringr)
 library(lubridate)
 library(hrbrthemes)
+library(ggplot2)
 ```
 
 ## Reading in the data 
@@ -33,15 +34,20 @@ bud_vs_actuals <- setNames(bud_vs_actuals[-1, ], as.character(unlist(bud_vs_actu
 ```
 
 ####
-## Creating tables for the plots
-Creating the calculations for the tables. There will be a total of 10 tables that are from the `745 Expense Report`. 
+## Creating calculations for the tables
+Creating the calculations for the tables. There will be a total of 10 tables that are from the `754 SFSP Expense Report`. 
 
-*First calculations include the Revised Budget calculations*
-*Second calculations include the GL_YTD_EXP calculations*
+*First calculations include the Revised Budget*
+*Second calculations include the GL_YTD_EXP*
 *Third calculations include the Analysis Table*
+*Fourth calculation include the Percentage Table*
 ####
 
+
+
 ### General Funds 1001 Table
+*First calculations include the Revised Budget*
+
 
 ```{r slicingfirst, warning=FALSE}
 # --- slicing the rows for the analysis ---
@@ -129,11 +135,6 @@ sg_final_tbl <- sg_summary |>
 
 tpe_summary <- bind_rows(gf_final_tbl, sg_final_tbl)
 
-# --- create the tpe table --- 
-
-tpe <- tpe_summary |> 
-  summarise(`Salaries/OPC Projections` = sum(`Salaries/OPC Projections`, na.rm = TRUE))
-
 # --- create the tpe_rb_final_tbl table ---
 
 tpe_rb_final_tbl <- tpe_summary |> 
@@ -146,7 +147,7 @@ tpe_rb_final_tbl <- tpe_summary |>
 
 
 ### GL_YTD_EXP Tables
-*Second calculations include the GL_YTD_EXP calculations*
+*Second calculations include the GL_YTD_EXP*
 
 ### GL_YTD_EXP General Funds 1001 Table
 This is for the GL_YTD_EXP Tables.
@@ -347,10 +348,11 @@ alys_tpe_final_tbl <- alys_tpe_summary |>
   )
 ```
 
-####
+
+*Fourth calculation include the Percentage Table*
+
 ### Percentage Calculations
 Here is a table that will calculate the percentages for the Percentage of Budget Depleted YTD Table.
-
 Using the `pull` function which ensures a single numeric value is extracted rather than a dataframe column.
 
 ```{r percentages, warning=FALSE}
@@ -366,130 +368,432 @@ pcnt_final_tbl <- tibble(
 
 
 
-
 #####
 ### Plotting the data for visulzations
-#####
+
 
 The tables that have the name `final` in them will be used for the plots. These plots will serve as a way to make the data represent what the tables are showing within the main dataset. 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-###
-## Creating plots
-###
-
-## General Plots
-Here I want to create plots that relate to the data that we see in the table. There will be a series of plots that will be used for this. The first plot that will be created is the General Funds 1001. 
-
-```{r creatingplots}
-
+*First table compares the General Fund 1001 and the GL YTD EXP General Fund*
+*Second table compares the Other Funds - 2089, 4000,  and 5000 and the GL YTD EXP State Grants*
+*Third table compares the Total Projections Equals to Row 268 and GL YTD EXP General Fund 1001*
+*Fourth table shows the Percent of Budget Depleted YTD Table Data*
+*Fifth table compares the Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis table General Fund 1001*
+*Sixth table compares the Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis table Other Funds - 2089, 4000,  and 5000 table*
+*Seventh table compares the Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis Total Projections equals to row 268 table*
+#####
+
+
+
+### General Funds 1001 and Generl Funds 1001 GL YTD EXP comparison plot
+The plot below will compare the GF and the GLYTD EXP General Funds 1001 data together. The `gf_glytd_comparison_data` includes the spending categories that are within the General Funds 1001. This will show which if the budget is close or over for the total overall budget of the spending categories. 
+
+
+```{r gfirstplot}
+gf_glytd_comparison_data <- data.frame(
+  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(gf_final_tbl) * 2),
+  Fund = rep(c("1001 General Funds", "GL YTD 1001 General Funds"), each = nrow(gf_final_tbl), times = 2),
+  Value = c(gf_final_tbl$`Salaries/OPC Projections`, glytd_gf_final_tbl$`Salaries/OPC Projections`,
+            gf_final_tbl$`Other EXP Projections`, glytd_gf_final_tbl$`Other EXP Projections`)
+)
+
+# Step 2: Calculate the total revised budget for the first rows defined in the dataset
+# Sum the Revised Budget from both gf_first_rows and gf_remaining_rows
+total_projections_gf <- sum(as.numeric(gf_first_rows$`Revised Budget`), na.rm = TRUE) + 
+                        sum(as.numeric(gf_remaining_rows$`Revised Budget`), na.rm = TRUE)
+
+
+# Step 3: Create the stacked horizontal bar chart with two threshold lines
+ggplot(gf_glytd_comparison_data, aes(x = Category, y = Value, fill = Fund)) +
+  geom_bar(stat = "identity", position = "stack") +  # Stacked bars
+  geom_segment(aes(x = 1, xend = 2.5, y = total_projections_gf, yend = total_projections_gf), 
+               linetype = "dashed", color = "blue", size = 1) +  # Short horizontal line for General Fund
+  annotate("text", x = 2.5, y = total_projections_gf, 
+           label = paste("Revised Budget", label_dollar()(total_projections_gf)), 
+           color = "blue", vjust = -0.5, size = 6) +  # Label for General Fund line with formatted dollar value
+  coord_flip() +  # Flip to make bars horizontal
+  labs(title = "1001 General Funds and General Ledger YTD Comaparisons",
+       subtitle = "1001 General Funds",
+       x = "Category", y = "Amount") +
+  scale_y_continuous(labels = label_dollar()) +  # Format y-axis labels as dollar values
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size = 14),  # Increase legend text size
+        plot.title = element_text(hjust = 0.5, size = 16),  # Increase plot title size
+        plot.subtitle = element_text(hjust = 0, size = 14),
+        axis.title.x = element_text(size = 14, face = "bold"),  # Increase x-axis title size
+        axis.title.y = element_text(size = 14, face = "bold"),  # Increase y-axis title size
+        axis.text.x = element_text(size = 14),  # Increase x-axis labels size
+        axis.text.y = element_text(size = 14))  # Increase y-axis labels size
+
+
+# save the plot
+ggsave("Charts/gf_glytd_comparison_data.png",width = 18, height = 16, dpi = 300)  
 ```
+
+
+### 5000 State Grants Fund Other Funds - 2089, 4000, and 5000 and GL YTD EXP comparison plot
+The plot below will compare the State Grants Fund and the GLYTD EXP 5000 State Grants data together. The `sg_glty_Revised Budget` includes the spending categories that are within the 5000 State Grants Fund. This will show which if the budget is close or over for the total overall budget of the spending categories. 
+
+
+```{r sf_sfglyt_plot, warning=FALSE}
+sg_glytd_comparison_data <- data.frame(
+  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(sg_final_tbl) * 2),
+  Fund = rep(c("5000 State Grants Funds", "GL YTD 5000 State Grants Funds"), each = nrow(sg_final_tbl), times = 2),
+  Value = c(sg_final_tbl$`Salaries/OPC Projections`, glytd_sg_final_tbl$`Salaries/OPC Projections`,
+            sg_final_tbl$`Other EXP Projections`, glytd_sg_final_tbl$`Other EXP Projections`)
+)
+
+# Step 2: Calculate the total revised budget for the first rows defined in the dataset
+# Sum the Revised Budget from both gf_first_rows and gf_remaining_rows
+total_projections_sg <- sum(as.numeric(sg_first_rows$`Revised Budget`), na.rm = TRUE) + 
+                        sum(as.numeric(sg_remaining_rows$`Revised Budget`), na.rm = TRUE)
+
+
+# Step 3: Create the stacked horizontal bar chart with two threshold lines
+ggplot(sg_glytd_comparison_data, aes(x = Category, y = Value, fill = Fund)) +
+  geom_bar(stat = "identity", position = "stack") +  # Stacked bars
+  geom_segment(aes(x = 1, xend = 2.5, y = total_projections_sg, yend = total_projections_sg), 
+               linetype = "dashed", color = "blue", size = 1) +  # Short horizontal line for General Fund
+  annotate("text", x = 2.5, y = total_projections_sg, 
+           label = paste("Revised Budget", label_dollar()(total_projections_sg)), 
+           color = "blue", vjust = -0.5, size = 6) +  # Label for General Fund line with formatted dollar value
+  coord_flip() +  # Flip to make bars horizontal
+  labs(title = "Other Funds - 2089, 4000, and 5000 and General Ledger YTD Comparisons",
+       subtitle = "5000 State Grant Funds",
+       x = "Category", y = "Amount") +
+  scale_y_continuous(labels = label_dollar()) +  # Format y-axis labels as dollar values
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size = 14),  # Increase legend text size
+        plot.title = element_text(hjust = 0.5, size = 16),  # Increase plot title size
+        plot.subtitle = element_text(hjust = 0, size = 14),
+        axis.title.x = element_text(size = 14, face = "bold"),  # Increase x-axis title size
+        axis.title.y = element_text(size = 14, face = "bold"),  # Increase y-axis title size
+        axis.text.x = element_text(size = 14),  # Increase x-axis labels size
+        axis.text.y = element_text(size = 14))  # Increase y-axis labels size
+
+
+# save the plot
+ggsave("Charts/sg_glytd_comparison_data.png",width = 18, height = 16, dpi = 300)  
+```
+
+
+### Total Projections Equals to Row 268 and GL YTD EXP - 1001 General Funds and 5000 State Grants comparison plot
+The plot below will compare the General Grants Fund and the GLYTD EXP 5000 State Grants data together. The `tpe_glytd_comparison_data` includes the spending categories that are within the 1001 General Grants and 5000 State Grants Fund. This will show which if the budget is close or over for the total overall budget of the spending categories. 
+
+
+```{r tpe_plot, warning=FALSE}
+# calculate the columns that would be needed for plotting
+tpe_glytd_comparison_data <- data.frame(
+  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), 
+                 each = nrow(gf_final_tbl) + nrow(sg_final_tbl)),  # Adjusting replication
+  
+  Fund = c(rep("1001 General Grants Fund", nrow(gf_final_tbl)), 
+           rep("GL YTD EXP 1001 General Grants Fund", nrow(gf_final_tbl)), 
+           rep("5000 State Grants Fund", nrow(sg_final_tbl)), 
+           rep("GL YTD EXP 5000 State Grants Fund", nrow(sg_final_tbl))),  # Assigning funds correctly
+  
+  Value = c(tpe_rb_final_tbl$`Salaries/OPC Projections`, 
+            glytd_tpe_final_tbl$`Salaries/OPC Projections`, 
+            tpe_rb_final_tbl$`Other EXP Projections`, 
+            glytd_tpe_final_tbl$`Other EXP Projections`)  # Matching values correctly
+)
+
+
+# Step 2: Calculate the total revised budget for the first rows defined in the dataset
+# Sum the Revised Budget from both gf_first_rows and gf_remaining_rows
+total_projections_tpeglytd <- sum(as.numeric(gsub("[^0-9.]", "", sg_first_rows$`Revised Budget`)), na.rm = TRUE) + 
+                        sum(as.numeric(gsub("[^0-9.]", "", sg_remaining_rows$`Revised Budget`)), na.rm = TRUE) +
+  sum(as.numeric(gsub("[^0-9.]", "", gf_first_rows$`Revised Budget`)), na.rm = TRUE) + 
+                        sum(as.numeric(gsub("[^0-9.]", "", gf_remaining_rows$`Revised Budget`)), na.rm = TRUE)
+
+
+# Step 3: Create the stacked horizontal bar chart with two threshold lines
+ggplot(tpe_glytd_comparison_data, aes(x = Category, y = Value, fill = Fund)) +
+  geom_bar(stat = "identity", position = "stack") +  # Stacked bars
+  geom_segment(aes(x = 1, xend = 2.5, y = total_projections_tpeglytd, yend = total_projections_tpeglytd), 
+               linetype = "dashed", color = "blue", size = 1) +  # Short horizontal line for General Fund
+  annotate("text", x = 2.5, y = total_projections_tpeglytd, 
+           label = paste("Revised Budget", label_dollar()(total_projections_tpeglytd)), 
+           color = "blue", vjust = -0.5, size = 6) +  # Label for General Fund line with formatted dollar value
+  coord_flip() +  # Flip to make bars horizontal
+  labs(title = "Total Projections Equals to Row 268 and GL YTD EXP Comaparisons",
+       subtitle = "1001 General Funds and 5000 State Grant Funds",
+       x = "Category", y = "Amount") +
+  scale_y_continuous(labels = label_dollar()) +  # Format y-axis labels as dollar values
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size = 14),  # Increase legend text size
+        plot.title = element_text(hjust = 0.5, size = 16),  # Increase plot title size
+        plot.subtitle = element_text(hjust = 0, size = 14),
+        axis.title.x = element_text(size = 14, face = "bold"),  # Increase x-axis title size
+        axis.title.y = element_text(size = 14, face = "bold"),  # Increase y-axis title size
+        axis.text.x = element_text(size = 14),  # Increase x-axis labels size
+        axis.text.y = element_text(size = 14))  # Increase y-axis labels size
+
+
+# save the plot
+ggsave("Charts/tpe_glytd_comparison_data.png",width = 18, height = 16, dpi = 300)  
+```
+
+
+### Percent of Budget Depleted YTD Table Data plot
+The plot below will compare the glytd and tp data in the Percentage of Budget Depleted YTD comparison. The `pcnt_final_data` includes the spending categories that are within the 1001 General Grants Fund. This will show which if the budget is close or over for the total overall budget of the spending categories. 
+
+
+```{r pct_plot, warning=FALSE}
+# create a percentage comparison dataframe
+pcnt_final_data <- data.frame(
+  Category = rep(c("Total Salaries", "Total Expenses", "Overall Total"), each = nrow(pcnt_final_tbl)),  
+  Fund = rep("GL YTD EXP 1001 General & 5000 State Grants Funds", nrow(pcnt_final_tbl) * 3),  # Repeat the fund name for each category
+  Value = round(c(
+    (glytd_tpe_final_tbl$`Salaries/OPC Projections` / tpe_rb_final_tbl$`Salaries/OPC Projections`) * 100,  
+    (glytd_tpe_final_tbl$`Other EXP Projections` / tpe_rb_final_tbl$`Other EXP Projections`) * 100,
+    (glytd_tpe_final_tbl$`Total Projections` / tpe_rb_final_tbl$`Total Projections`) * 100
+  ), 0)  # Round to whole numbers
+)
+
+
+# Step 2: Calculate the total revised budget for the first rows defined in the dataset
+# Sum the Revised Budget from both gf_first_rows and gf_remaining_rows
+total_projections_sg <- sum(as.numeric(sg_first_rows$`Revised Budget`), na.rm = TRUE) + 
+                        sum(as.numeric(sg_remaining_rows$`Revised Budget`), na.rm = TRUE)
+
+
+# Step 3: Create the stacked horizontal bar chart with two threshold lines
+ggplot(pcnt_final_data, aes(x = Category, y = Value, fill = Category)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Side-by-side bars (non-stacked)
+  labs(title = "Percentage of Budget Depleted YTD Comparisons",
+       subtitle = "1001 General Funds and 5000 State Grant Funds",
+       x = "Category", y = "Percentage (%)") +
+  coord_flip()+
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +  # Format y-axis labels as percentages
+  scale_fill_manual(values = c("Total Salaries" = "#004D40", 
+                               "Total Expenses" = "#1E88E5", 
+                               "Overall Total" = "#5D3A9B")) +  # Custom colors for each category
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size = 14),  # Increase legend text size
+        plot.title = element_text(hjust = 0.5, size = 16),  # Increase plot title size
+        plot.subtitle = element_text(hjust = 0,size = 12),
+        axis.title.x = element_text(size = 14, face = "bold" ),  # Increase x-axis title size
+        axis.title.y = element_text(size = 14, face = "bold"),  # Increase y-axis title size
+        axis.text.x = element_text(size = 14),  # Increase x-axis labels size
+        axis.text.y = element_text(size = 14))  # Increase y-axis labels size
+
+
+# save the plot
+ggsave("Charts/pct_tbl.png",width = 18, height = 16, dpi = 300)  
+```
+
+
+*Fifth table compares the Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis table General Fund 1001*
+
+### Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis table General Fund 1001 comparison plot
+The plot below will compare the Analysis table General Fund data together. The `ays_gf_comparison_data` includes the spending categories that are within the 1001 General Grants. This will show which if the budget is close or over for the total overall budget of the spending categories. 
+
+
+```{r anlys_gf_plot, warning=FALSE}
+# Create the comparison data for plotting
+ays_gf_comparison_data <- data.frame(
+  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(alysgf_summary)),  
+  Fund = rep(c("1001 General Grants Fund"), each = nrow(alysgf_summary)),  
+  Value = c(
+    rowSums(replace(alysgf_summary[, c("Remaining Balance - Salaries/OPC", "Projected YE Value - Salaries/OPC", 
+                                       "Sur/(Def) - Salaries/OPC")], is.na(alysgf_summary[, c("Remaining Balance - Salaries/OPC", 
+                                                                                            "Projected YE Value - Salaries/OPC", 
+                                                                                            "Sur/(Def) - Salaries/OPC")]), 0)),  
+    rowSums(replace(alysgf_summary[, c("Projected YE Value - Other EXP", "Sur/(Def) - Other EXP")], 
+                    is.na(alysgf_summary[, c("Projected YE Value - Other EXP", "Sur/(Def) - Other EXP")]), 0))
+  )
+)
+
+# Step 2: Create the non-stacked horizontal bar chart with custom colors and bold axis titles
+ggplot(ays_gf_comparison_data, aes(x = Category, y = Value, fill = Category)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Non-stacked bars (side-by-side)
+  scale_fill_manual(values = c("Salaries/OPC Projections" = "steelblue", 
+                               "Other EXP Projections" = "darkgreen")) +  # Custom colors
+  scale_y_continuous(labels = label_dollar()) +  # Format y-axis values with dollar signs and commas
+  coord_flip()+
+  labs(title = "Analysis Table 1001 General Grant Funds Comparisons",
+       subtitle = "1001 General Funds",
+       x = "Category",
+       y = "Amount") +
+  theme_minimal() +
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 14),
+    plot.subtitle = element_text(hjust = 0, size = 12),
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.title.x = element_text(size = 14, face = "bold"),  # Bold x-axis title
+    axis.title.y = element_text(size = 14, face = "bold"),  # Bold y-axis title
+    axis.text.x = element_text(size = 12, angle = 45, hjust = 1),  # Rotate x-axis labels
+    axis.text.y = element_text(size = 12)
+  )
+
+# save the plot
+ggsave("Charts/ays_gf_comparison_data.png",width = 18, height = 16, dpi = 300)  
+```
+
+
+ 
+*Sixth table compares the Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis Other Funds - 2089, 4000, and 5000 table*
+
+### Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis Other Funds - 2089, 4000,  and 5000 table plot
+The plot below will compare the Analysis table General Fund data together. The `ays_sg_comparison_data` includes the spending categories that are within the 5000 State Grants Fund. This will show which if the budget is close or over for the total overall budget of the spending categories. 
+
+
+```{r anlys_gf_plot, warning=FALSE}
+# Create the comparison data for plotting
+ays_sg_comparison_data <- data.frame(
+  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(alysg_summary)),  
+  Fund = rep(c("5000 State Grants Fund"), each = nrow(alysg_summary)),  
+  Value = c(
+    rowSums(replace(alysg_summary[, c("Remaining Balance - Salaries/OPC", "Projected YE Value - Salaries/OPC", 
+                                       "Sur/(Def) - Salaries/OPC")], is.na(alysg_summary[, c("Remaining Balance - Salaries/OPC", 
+                                                                                            "Projected YE Value - Salaries/OPC", 
+                                                                                            "Sur/(Def) - Salaries/OPC")]), 0)),  
+    rowSums(replace(alysg_summary[, c("Projected YE Value - Other EXP", "Sur/(Def) - Other EXP")], 
+                    is.na(alysg_summary[, c("Projected YE Value - Other EXP", "Sur/(Def) - Other EXP")]), 0))
+  )
+)
+
+# Step 2: Create the non-stacked horizontal bar chart with custom colors and bold axis titles
+ggplot(ays_sg_comparison_data, aes(x = Category, y = Value, fill = Category)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Non-stacked bars (side-by-side)
+  scale_fill_manual(values = c("Salaries/OPC Projections" = "steelblue", 
+                               "Other EXP Projections" = "darkgreen")) +  # Custom colors
+  scale_y_continuous(labels = label_dollar()) +  # Format y-axis values with dollar signs and commas
+  coord_flip()+
+  labs(title = "Analysis Table Other Funds - 2089, 4000, and 5000 Comparisons",
+        subtitle = "5000 State Grant Funds",
+       x = "Category",
+       y = "Amount") +
+  theme_minimal() +
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5, size = 16),
+    plot.subtitle = element_text(hjust = 0,size = 12),
+    axis.title.x = element_text(size = 14, face = "bold"),  # Bold x-axis title
+    axis.title.y = element_text(size = 14, face = "bold"),  # Bold y-axis title
+    axis.text.x = element_text(size = 12, angle = 45, hjust = 1),  # Rotate x-axis labels
+    axis.text.y = element_text(size = 12)
+  )
+
+# save the plot
+ggsave("Charts/ays_sg_comparison_data.png",width = 18, height = 16, dpi = 300)  
+```
+
+
+
+*Seventh table compares the Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis Total Projections equals to row 268 table*
+
+### Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis Total Projections equals to row 268 plot
+The plot below will compare the Analysis table General Fund data together. The `aystpe_comparison_data` includes the spending categories that are within the 1001 General Grants. This will show which if the budget is close or over for the total overall budget of the spending categories. 
+
+
+```{r anlys_tpe_plot, warning=FALSE}
+# Create the comparison data for plotting
+aystpe_comparison_data <- data.frame(
+  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), 
+                 each = nrow(alysgf_final_tbl) + nrow(alysg_final_tbl)),  # Adjusting replication
+  
+  Fund = c(rep("1001 General Grants Fund", nrow(alysgf_final_tbl)), 
+           rep("GL YTD EXP 1001 General Grants Fund", nrow(alysg_final_tbl)), 
+           rep("1001 General Grants Fund", nrow(alysgf_final_tbl)), 
+           rep("GL YTD EXP 5000 State Grants Fund", nrow(alysg_final_tbl))),  # Assigning funds correctly
+  
+  Value = c(alysgf_final_tbl$`Salaries/OPC Projections`, 
+            alysg_final_tbl$`Salaries/OPC Projections`, 
+            alysgf_final_tbl$`Other EXP Projections`, 
+            alysg_final_tbl$`Other EXP Projections`)  # Matching values correctly
+)
+
+
+# Step 2: Create the non-stacked horizontal bar chart with custom colors and bold axis titles
+ggplot(aystpe_comparison_data, aes(x = Category, y = Value, fill = Category)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Non-stacked bars (side-by-side)
+  scale_fill_manual(values = c("Salaries/OPC Projections" = "steelblue", 
+                               "Other EXP Projections" = "darkgreen")) +  # Custom colors
+  scale_y_continuous(labels = label_dollar()) +  # Format y-axis values with dollar signs and commas
+  coord_flip()+
+  labs(title = "Analysis Table Total Projections Equals to Row 268 Comparisons",
+       subtitle = "1001 General Funds and 5000 State Grant Funds",
+       x = "Category",
+       y = "Amount") +
+  theme_minimal() +
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5, size = 16),
+    plot.subtitle = element_text(hjust = 0,size = 12),
+    axis.title.x = element_text(size = 14, face = "bold"),  # Bold x-axis title
+    axis.title.y = element_text(size = 14, face = "bold"),  # Bold y-axis title
+    axis.text.x = element_text(size = 12, angle = 45, hjust = 1),  # Rotate x-axis labels
+    axis.text.y = element_text(size = 12)
+  )
+
+# save the plot
+ggsave("Charts/ays_tpe_comparison_data.png",width = 18, height = 16, dpi = 300)  
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
