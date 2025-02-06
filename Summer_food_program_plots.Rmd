@@ -33,6 +33,7 @@ bud_vs_actuals <- read.xlsx(here("FY 2024 Budget and Actual as of 12_31_2024.xls
 bud_vs_actuals <- setNames(bud_vs_actuals[-1, ], as.character(unlist(bud_vs_actuals[1, ])))
 ```
 
+
 ####
 ## Creating calculations for the tables
 Creating the calculations for the tables. There will be a total of 10 tables that are from the `754 SFSP Expense Report`. 
@@ -389,7 +390,7 @@ The tables that have the name `final` in them will be used for the plots. These 
 The plot below will compare the GF and the GLYTD EXP General Funds 1001 data together. The `gf_glytd_comparison_data` includes the spending categories that are within the General Funds 1001. This will show which if the budget is close or over for the total overall budget of the spending categories. 
 
 
-```{r gfirstplot}
+```{r gfirstplot, warning=FALSE}
 gf_glytd_comparison_data <- data.frame(
   Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(gf_final_tbl) * 2),
   Fund = rep(c("1001 General Funds", "GL YTD 1001 General Funds"), each = nrow(gf_final_tbl), times = 2),
