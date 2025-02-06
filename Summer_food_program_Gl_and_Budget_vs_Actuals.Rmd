@@ -20,6 +20,7 @@ library(stringr)
 library(lubridate)
 ```
 
+
 ## Reading in the data 
 Reading in the files for the data that will be used. Put new data files in the "Data" folder and replace the file names below with the names of the new files.
 
@@ -88,6 +89,7 @@ budg_vs_actuals <- budg_vs_actuals |>
  names(budg_vs_actuals)
 ```
 
+
 ## Cleaning the datasets
 I need to remove some of the rows that are not needed for the analysis. I will then make the new row be the header row. 
 
@@ -103,6 +105,7 @@ budg_vs_actuals <- budg_vs_actuals |>
   mutate(Grant = ifelse(Grant == "(Blank)", NA_character_, Grant))
 
 ```
+
 
 ####
 ## Creating the fiscal months
@@ -141,6 +144,7 @@ expense_report_tbl <- expense_report_tbl |>
 )
 ```
 
+
 ###
 ## Calculations for workbook tables
 Calculating the gl_ytd_exp column. I will also rename the `Total Actual` column to the `Total Expenditure` column. Then join the gl table to the expense report table. Then calculate the columns that are needed for the analysis table. 
@@ -161,6 +165,7 @@ expense_report_tbl <- expense_report_tbl |>
   rename(`Total Expenditures` = `Total Actuals`) |> 
   mutate(`GL YTD EXP` = if_else(is.na(`GL YTD EXP`), 0, `GL YTD EXP`)) 
 ```
+
 
 1. Create the summary table that houses the summer food expense data.
 
@@ -184,6 +189,7 @@ summer_expense_rep <- all_expense_rep |>
   relocate(`Total Expenditures`, .after = `GL YTD EXP`) |> 
   mutate(`GL YTD EXP` = round(`GL YTD EXP`, 2))  # rounds to 2 decimal places
 ```
+
 
 2. Calculating the columns for the Analysis Table
 Create the columns that are needed for the second table that is in the `754 SFSP Expense Report`.
@@ -245,7 +251,10 @@ tblwhodis$Notes <- NA_character_
 ```
 
 
-###
+####
+### Creating the Excel workbooks
+####
+
 ## Create the Excel workbooks for wb1 and wb2
 Creating wb1 for the summer food program and wb2 for the analysis table.
 
@@ -269,17 +278,39 @@ analysis_tbl <- tblwhodis |>
 ###
 ## Styling for the Excel workbooks
 This will create the styling for the 2 wbs. The Summer Food Program and the Analysis Table.
+*NOTE: You do NOT need to change the name of the title header for the tables. As the function in line 294 will automatically detect the fiscal year end or begining date and apply the month/day to the header (line 304)*
 
 ```{r stylingforwb1}
-# --- create the worksheet
+# --- get the current system date when this was run ---
 
-# Add the worksheet to the created workbook
+current_date <- Sys.Date()
+
+# extract year and month
+current_year <- format(current_date, "%Y")
+current_month <- as.numeric(format(current_date, "%m"))
+
+
+# Determine the fiscal year
+if (current_month >= 7) {
+  fiscal_year <- as.numeric(current_year) + 1
+} else {
+  fiscal_year <- as.numeric(current_year)
+}
+
+# --- create a workbook ---
+
+# format the title header 
+
+title_header <- paste0("FY ", fiscal_year, " Budget and Actual as of ", format(current_date, "%m/%d/%Y"))
+
+# add the worksheet to the created workbook
 wb1 <- createWorkbook()
 addWorksheet(wb1, "Summer Expense Report")
 
 # --- add Title Header (Row 1) ---
+
 # creating a title header 
-writeData(wb1, "Summer Expense Report", "FY 2024 Budget and Actual as of 07/31/2024", startRow = 1, startCol = 1)
+writeData(wb1, "Summer Expense Report", title_header, startRow = 1, startCol = 1)
 header_style <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#ED7D31")
 
 # merge the cells for the title
@@ -309,8 +340,8 @@ addStyle(wb1, "Summer Expense Report", column_names_style, rows = 2, cols = 1:nc
 
 # --- saving the wb ---
 saveWorkbook(wb1, "summer_expense_report.xlsx", overwrite = TRUE)
-
 ```
+
 
 Styling for the 2 wb or Analysis table.
 
@@ -363,6 +394,7 @@ addStyle(wb2, "analysis_tbl", column_names_style, rows = 2, cols = 1:ncol(analys
 saveWorkbook(wb2, "analysis_tbl.xlsx", overwrite = TRUE)
 ```
 
+
 ###
 ## Combining the workbooks
 Last step, "Whew!", is to join the two of these workbooks together to have 1 full working workbook that can be used for the team. 
@@ -399,18 +431,14 @@ mergeCells(wb_combined, "tables_unite", cols = (ncol(summer_expense_rep) + 3):(n
 addStyle(wb_combined, "tables_unite", title_style_analysis, rows = 1, cols = (ncol(summer_expense_rep) + 3):(ncol(summer_expense_rep) + 2 + ncol(analysis_tbl)), gridExpand = TRUE)
 writeData(wb_combined, "tables_unite", analysis_tbl, startRow = 2, startCol = ncol(summer_expense_rep) + 3, colNames = TRUE)
 addStyle(wb_combined, "tables_unite", header_style_analysis, rows = 2, cols = (ncol(summer_expense_rep) + 3):(ncol(summer_expense_rep) + 2 + ncol(analysis_tbl)), gridExpand = TRUE)
+
+# save the final workbook
+# the file will automatically assign a date to the workbook
+# add a space in the file output as well to ensure the data is not all bundled up
+
+saveWorkbook(wb_combined, paste0("FY ", fiscal_year, " Budget and Actual as of ", format(current_date, "%m-%d-%Y"), ".xlsx"), overwrite = TRUE)
 ```
 
-
-###
-## Saving the combined workbook to your drive
-Save the final workbook to your local drive
-
-```{r savingwb1}
-# save the workbook
-# change the name of the output file accordingly
-saveWorkbook(wb_combined, "FY 2024 Budget and Actual as of 12_31_2024.xlsx", overwrite = TRUE) 
-```
 
 #### YOU DID IT ####
 Congratulations! You did a wonderful job coding! 

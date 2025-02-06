@@ -389,7 +389,7 @@ The tables that have the name `final` in them will be used for the plots. These 
 The plot below will compare the GF and the GLYTD EXP General Funds 1001 data together. The `gf_glytd_comparison_data` includes the spending categories that are within the General Funds 1001. This will show which if the budget is close or over for the total overall budget of the spending categories. 
 
 
-```{r gfirstplot}
+```{r gfirstplot, warning=FALSE}
 gf_glytd_comparison_data <- data.frame(
   Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(gf_final_tbl) * 2),
   Fund = rep(c("1001 General Funds", "GL YTD 1001 General Funds"), each = nrow(gf_final_tbl), times = 2),
