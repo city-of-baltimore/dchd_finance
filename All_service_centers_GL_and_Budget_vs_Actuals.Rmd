@@ -6,7 +6,7 @@ output: html_document
 ---
 
 # Project Overview
-This markdown file will use the DHCD Finance dept documents that are for reporting expenditures and GL data. The data is collected from Workday.
+This markdown file will use the DHCD Finance dept documents that are for reporting expenditures and GL data. The data is collected from Workday. This file includes all of the service centers and there cost centers in the rmd. 
 
 ```{r libraries, warning=FALSE, message=TRUE}
 # libraries for data analysis
@@ -30,7 +30,7 @@ gl_file_name <- "GL-Operating Actual Expenses YTD 2024-12-19 13_03 EST.xlsx"
 budg_vs_act_file_name <- "Budget_vs_Actuals_-_BBMR YTD 2024-12-19.xlsx" 
 
 # read data from files
-gl_data <- readxl::read_xlsx(here("Data", gl_file_name), 
+all_gl_data <- readxl::read_xlsx(here("Data", gl_file_name), 
                              skip = 13,
                              col_types = c(rep("text",2),   
                                            "date", 
@@ -88,12 +88,13 @@ budg_vs_actuals <- budg_vs_actuals |>
  names(budg_vs_actuals)
 ```
 
+
 ## Cleaning the datasets
 I need to remove some of the rows that are not needed for the analysis. I will then make the new row be the header row. 
 
 ```{r cleaningdata}
 # add round all expenditure days to the expenditure month
-gl_data <- gl_data |> 
+all_gl_data <- all_gl_data |> 
   mutate(expend_month = floor_date(`Accounting Date` , unit = "month"))
 
 # remove columns that have nulls for all values 
@@ -103,6 +104,7 @@ budg_vs_actuals <- budg_vs_actuals |>
   mutate(Grant = ifelse(Grant == "(Blank)", NA_character_, Grant))
 
 ```
+
 
 ####
 ## Creating the fiscal months
@@ -141,26 +143,32 @@ all_expense_report_tbl <- all_expense_report_tbl |>
 )
 ```
 
+
 ###
 ## Calculations for gl_ytd_exp
 Calculating the gl_ytd_exp column. I will also rename the `Total Actual` column to the `Total Expenditure` column. Then join the gl table to the all expense report table. 
 
 ```{r calculations}
 # --- aggregate the GL_YTD_EXP by Fund, Spend Category, and Cost Center ---
-gl_data_exp <- gl_data |> 
+all_gl_data_exp <- all_gl_data |> 
   group_by(Fund, `Spend Category as Worktag`, `Cost Center`) |> 
   summarise(`GL YTD EXP` = sum(Amount, na.rm = TRUE), .groups = "drop")
 
 # --- Joining datasets ---
 # joining the GL YTD data to the all_expense_report_tbl
 all_expense_report_tbl <- all_expense_report_tbl |> 
-  left_join(gl_data_exp, 
+  left_join(all_gl_data_exp, 
             by = c("Spend Category" = "Spend Category as Worktag", 
                    "Cost Center" = "Cost Center", 
                    "Fund" = "Fund")) |> 
   rename(`Total Expenditures` = `Total Actuals`) |> 
   mutate(`GL YTD EXP` = if_else(is.na(`GL YTD EXP`), 0, `GL YTD EXP`)) 
 ```
+
+
+####
+### Creating the Excel workbooks
+####
 
 ###
 ## Creating the workbooks for Excel 
@@ -179,11 +187,16 @@ all_expense_rep <- all_expense_report_tbl |>
     `Corrections to Budget`,
     Amendments,
     `Total Spent`
-  ))
+  )) |>  # Corrected closing parenthesis here
+  relocate(`Spend Category`, .after = `Cost Center`) |> 
+  mutate(`GL YTD EXP` = round(`GL YTD EXP`, 2))  # Rounds to 2 decimal places
+
 ```
+
 
 2. Calculating the columns for the Analysis Table
 Create the columns that are needed for the second table that is in the `754 SFSP Expense Report`.
+
 
 ```{r calculatingcols, warning=FALSE}
 # create a new dataframe with only the new columns included and not the rest
@@ -244,26 +257,60 @@ all_tblwhodis$Notes <- NA_character_
 
 ###
 ## Create the Excel workbook for wb1 and wb2
-Creating wb1 for the all service centers and wb2 for the analysis table.
+Creating wb1 for the all service centers and wb2 for the analysis all table.
 
 ```{r wbs}
+# keeping only the rows we want and make sure to move the total expenditures to after the GL_YTD_EXP column
 all_expense_rep <- all_expense_rep |> 
   group_by(Fund, `Cost Center`) |> 
   mutate(row_num = row_number()) |> 
   ungroup() |> 
-  mutate_at(vars(Fund, `Cost Center`), ~ifelse(row_num == 1, . , ""))
+  mutate(
+    Fund = ifelse(row_num == 1, Fund, ""),
+    `Cost Center` = ifelse(row_num == 1, `Cost Center`, "")
+  ) |> 
+  select(-row_num)
+
+
+# move the Total EXP column to after the GL column
+all_expense_rep <- all_expense_rep |> 
+  relocate(`Total Expenditures`, .after = `GL YTD EXP`)
+
 
 # only keep the columns that are needed for this table
 all_analysis_tbl <- all_tblwhodis |> 
   select(`Remaining Balance`, `Projected Y|E Value`, `Sur / (Def)`, Notes)
 ```
 
+
 ###
 ## Styling for the Excel workbooks
-This will create the styling for the 2 wbs. The All Service Centers Report and the Analysis Table.
+This will create the styling for the 2 wbs. The All Service Centers Report and the Analysis Table. 
+*NOTE: You do NOT need to change the name of the title header for the tables. As the function in line 284 will automatically detect the fiscal year end or begining date and apply the month/day to the header (line 294)*
+
 
 ```{r stylingforwb1}
+# --- get the current system date when this was run ---
+
+current_date <- Sys.Date()
+
+# extract year and month
+current_year <- format(current_date, "%Y")
+current_month <- as.numeric(format(current_date, "%m"))
+
+
+# Determine the fiscal year
+if (current_month >= 7) {
+  fiscal_year <- as.numeric(current_year) + 1
+} else {
+  fiscal_year <- as.numeric(current_year)
+}
+
 # --- create a workbook ---
+
+# format the title header 
+
+title_header <- paste0("FY ", fiscal_year, " Budget and Actual as of ", format(current_date, "%m/%d/%Y"))
 
 # add the worksheet to the created workbook
 wb1 <- createWorkbook()
@@ -272,12 +319,16 @@ addWorksheet(wb1, "All Service Centers Report")
 # --- add Title (Row 1) ---
 
 # add a header, style, and color with the label "Service Centers" in the first row
-writeData(wb1, "All Service Centers Report", "FY 2024 Budget and Actual as of 07/31/2024", startRow = 1, startCol = 1)
+writeData(wb1, "All Service Centers Report", title_header, startRow = 1, startCol = 1)
 header_style <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#ED7D31")
 
 # merge the cells
 mergeCells(wb1, "All Service Centers Report", cols = 1:ncol(all_expense_rep), rows = 1)
 addStyle(wb1, "All Service Centers Report", header_style, rows = 1, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
+
+# --- Write the Data (Row 2) with Column Names ---
+
+writeData(wb1, "All Service Centers Report", all_expense_rep, startRow = 2, startCol = 1, colNames = TRUE)
 
 # --- align for column headers ---
 
@@ -297,9 +348,14 @@ column_names_style <- createStyle(
 
 # apply the style to the column names (first row of data)
 addStyle(wb1, "All Service Centers Report", column_names_style, rows = 2, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
+
+# save the workbook
+saveWorkbook(wb1, "all_service_center_reports.xlsx", overwrite = TRUE)
 ```
 
-Styling for the 2 wb or Analysis table.
+
+
+Styling for the 2 wb or Analysis all table.
 
 ```{r stylingforwb2}
 # only keep the columns that are needed for this table
@@ -345,20 +401,7 @@ column_names_style <- createStyle(
 # apply the style to the column names (first row of data)
 addStyle(wb2, "all_analysis_tbl", column_names_style, rows = 2, cols = 1:ncol(all_analysis_tbl), gridExpand = TRUE)
 
-# --- save the workbook 2 ---
-
-# saving the workbook
-saveWorkbook(wb2, "all_analysis_tbl.xlsx", overwrite = TRUE)
-```
-
-
-###
-## Saving workbooks
-Save workbook 1 and 2 for later once we combine the data together.
-
-```{r savingwb1}
-# save the workbooks
-saveWorkbook(wb1, "all_service_center_reports.xlsx", overwrite = TRUE)
+# save the workbook
 saveWorkbook(wb2, "all_analysis_tbl.xlsx", overwrite = TRUE)
 ```
 
@@ -371,10 +414,10 @@ Last step, "Whew!", is to join the two of these workbooks together to have 1 ful
 # --- combine the two workbooks on the same worksheet with full formatting ---
 
 # create a new workbook for the combined data
-wb_combined <- createWorkbook()
+all_wb_combined <- createWorkbook()
 
 # add a worksheet for combined data
-addWorksheet(wb_combined, "tables_unite")
+addWorksheet(all_wb_combined, "tables_unite")
 
 # define styles
 title_style_summer <- createStyle(halign = "center", valign = "center", textDecoration = "bold", fgFill = "#FFA500", fontSize = 11)
@@ -386,15 +429,15 @@ header_style_analysis <- createStyle(halign = "center", valign = "center", textD
 # --- write the first table (all_expense_rep) with title and formatting ---
 
 # add title for the first table
-writeData(wb_combined, "tables_unite", "All Service Centers Report", startRow = 1, startCol = 1)
-mergeCells(wb_combined, "tables_unite", cols = 1:ncol(all_expense_rep), rows = 1)
-addStyle(wb_combined, "tables_unite", title_style_summer, rows = 1, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
+writeData(all_wb_combined, "tables_unite", "All Service Centers Report", startRow = 1, startCol = 1)
+mergeCells(all_wb_combined, "tables_unite", cols = 1:ncol(all_expense_rep), rows = 1)
+addStyle(all_wb_combined, "tables_unite", title_style_summer, rows = 1, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
 
 # write the first table
-writeData(wb_combined, "tables_unite", all_expense_rep, startRow = 2, startCol = 1, colNames = TRUE)
+writeData(all_wb_combined, "tables_unite", all_expense_rep, startRow = 2, startCol = 1, colNames = TRUE)
 
 # apply column header style to the first table
-addStyle(wb_combined, "tables_unite", header_style_summer, rows = 2, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
+addStyle(all_wb_combined, "tables_unite", header_style_summer, rows = 2, cols = 1:ncol(all_expense_rep), gridExpand = TRUE)
 
 # --- add 2 blank columns for separation ---
 
@@ -403,28 +446,27 @@ num_rows_summer <- nrow(all_expense_rep)
 num_cols_summer <- ncol(all_expense_rep)
 
 # write blank columns for separation
-writeData(wb_combined, "tables_unite", matrix("", nrow = num_rows_summer + 2, ncol = 2), 
+writeData(all_wb_combined, "tables_unite", matrix("", nrow = num_rows_summer + 2, ncol = 2), 
           startRow = 1, startCol = num_cols_summer + 1, colNames = FALSE)
 
 # --- Write the second table (all_analysis_tbl) with title and formatting ---
 
 # add title for the second table
-writeData(wb_combined, "tables_unite", "Analysis Table", startRow = 1, startCol = num_cols_summer + 3)
-mergeCells(wb_combined, "tables_unite", cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(all_analysis_tbl)), rows = 1)
-addStyle(wb_combined, "tables_unite", title_style_analysis, rows = 1, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(all_analysis_tbl)), gridExpand = TRUE)
+writeData(all_wb_combined, "tables_unite", "Analysis Table", startRow = 1, startCol = num_cols_summer + 3)
+mergeCells(all_wb_combined, "tables_unite", cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(all_analysis_tbl)), rows = 1)
+addStyle(all_wb_combined, "tables_unite", title_style_analysis, rows = 1, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(all_analysis_tbl)), gridExpand = TRUE)
 
 # write the second table
-writeData(wb_combined, "tables_unite", all_analysis_tbl, startRow = 2, startCol = num_cols_summer + 3, colNames = TRUE)
+writeData(all_wb_combined, "tables_unite", all_analysis_tbl, startRow = 2, startCol = num_cols_summer + 3, colNames = TRUE)
 
 # apply column header style to the second table
-addStyle(wb_combined, "tables_unite", header_style_analysis, rows = 2, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(all_analysis_tbl)), gridExpand = TRUE)
+addStyle(all_wb_combined, "tables_unite", header_style_analysis, rows = 2, cols = (num_cols_summer + 3):(num_cols_summer + 2 + ncol(all_analysis_tbl)), gridExpand = TRUE)
 
 # --- save the combined workbook ---
 
 # saving the workbook
-# r does not like slashes so you need to do underscores
-# update the name of the output file as needed
-saveWorkbook(wb_combined, "All Service Centers as of 12_31_2024.xlsx", overwrite = TRUE) # change the name of the output file accordingly
+# the file will automatically assign a date to the workbook
+saveWorkbook(all_wb_combined, paste0("FY ", fiscal_year, " All Services Budget and Actual as of ", format(current_date, "%m-%d-%Y"), ".xlsx"), overwrite = TRUE)
 ```
 
 #### YOU DID IT ####
