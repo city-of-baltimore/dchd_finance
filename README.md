@@ -9,15 +9,15 @@ Uses internal city data available on Workday. Data is then downloaded to a local
 
 Includes:
 
-Budget vs Actuals BBMR YTD 
+Budget vs Actuals BBMR YTD - raw data from Workday
 
-GL-Operating Actual Expenses YTD
+GL-Operating Actual Expenses YTD - raw data from Workday
 
 All service expense rmd file
 
 Summer food program only rmd file
 
-Summer food program plots
+Summer food program rmd plots
 
 All service expense rmd plots
 
@@ -37,5 +37,12 @@ This folder contains rmd files that are used to create the plots for specific de
 
   1. Cost center negative spending plot
   2. Cost center negative spending drilled down to the spend category
-  3. Total spending for the month of July 
+  3. Total spending for the month of July
+
+# Summer and All Service Names Plots
+This is a rmd file that contains statcked and regular bar charts to compare the various tables under the 1001 General and 5000 State Grants data. There are 10 tables that are then made into plots for the DHCD team to replicate and show internally or to their stakeholders. The visuals are labeled and contain the Revised Budget column as a line within the plot to demonstrate which of the funds have spent over or close to their budgeted amount based on the two columns: Salaries/OPC Projections and Other EXP Projections.
+
+
+
+
 
