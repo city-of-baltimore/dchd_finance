@@ -27,7 +27,11 @@ Reading in the files for the data that will be used for creating the plots that 
 
 ```{r readingdata}
 # reading in the dataset for the summer_expense_report
-bud_vs_actuals <- read.xlsx(here("FY 2024 Budget and Actual as of 12_31_2024.xlsx"))
+# this will find the file with the budget and actual pattern.
+bud_vs_actuals_files <- list.files(here(), pattern = "FY \\d{4} Budget and Actual.*\\.xlsx", full.names = TRUE)
+
+# Read the latest file
+bud_vs_actuals <- read.xlsx(bud_vs_actuals_files)
 
 # set the first row as headers and remove it from the data
 bud_vs_actuals <- setNames(bud_vs_actuals[-1, ], as.character(unlist(bud_vs_actuals[1, ])))
