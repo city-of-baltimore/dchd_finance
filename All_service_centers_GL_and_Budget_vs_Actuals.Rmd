@@ -102,7 +102,6 @@ all_gl_data <- all_gl_data |>
 budg_vs_actuals <- budg_vs_actuals |> 
   select_if(~sum(!is.na(.)) > 0) |> 
   mutate(Grant = ifelse(Grant == "(Blank)", NA_character_, Grant))
-
 ```
 
 
@@ -190,7 +189,10 @@ all_expense_rep <- all_expense_report_tbl |>
   )) |>  # Corrected closing parenthesis here
   relocate(`Spend Category`, .after = `Cost Center`) |> 
   mutate(`GL YTD EXP` = round(`GL YTD EXP`, 2))  # Rounds to 2 decimal places
+<<<<<<< HEAD
 
+=======
+>>>>>>> 8489e411ef92aaf03edb99dd2480afbf8b440db0
 ```
 
 
@@ -473,7 +475,7 @@ saveWorkbook(all_wb_combined, paste0("FY ", fiscal_year, " All Services Budget a
 Congratulations! You did a wonderful job coding! 
 If this is your first real coding script, then I must say you choose a tricky script. 
 Go ahead and call yourself a Rstudio programmer you data analyst!
-
+#### YOU DID IT ####
 
 
 
