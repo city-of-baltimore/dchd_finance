@@ -9,17 +9,17 @@ Uses internal city data available on Workday. Data is then downloaded to a local
 
 Includes:
 
-Budget vs Actuals BBMR YTD - raw data from Workday
+1. Budget vs Actuals BBMR YTD - raw data from Workday
 
-GL-Operating Actual Expenses YTD - raw data from Workday
+2. GL-Operating Actual Expenses YTD - raw data from Workday
 
-All service expense rmd file
+3. All_service_centers_GL_and_Budget_vs_Actuals.Rmd file
 
-Summer food program only rmd file
+4. Summer_food_program_GL_and_Budget_vs_Actuals.Rmd file
 
-Summer food program rmd plots
+5. Summer_food_program_plots.Rmd file
 
-All service expense rmd plots
+6. All_service_centers_plots.Rmd file
 
 # How to use the github repository
 Clone code from github
