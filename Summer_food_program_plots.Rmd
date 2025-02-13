@@ -425,7 +425,7 @@ ggplot(gf_glytd_comparison_data, aes(x = Category, y = Value, fill = Fund)) +
   theme(legend.title = element_blank(),
         legend.text = element_text(size = 14),  # Increase legend text size
         plot.title = element_text(hjust = 0.5, size = 16),  # Increase plot title size
-        plot.subtitle = element_text(hjust = 0, size = 14),
+        plot.subtitle = element_text(hjust = 0.5, size = 14),
         axis.title.x = element_text(size = 14, face = "bold"),  # Increase x-axis title size
         axis.title.y = element_text(size = 14, face = "bold"),  # Increase y-axis title size
         axis.text.x = element_text(size = 14),  # Increase x-axis labels size
@@ -472,7 +472,7 @@ ggplot(sg_glytd_comparison_data, aes(x = Category, y = Value, fill = Fund)) +
   theme(legend.title = element_blank(),
         legend.text = element_text(size = 14),  # Increase legend text size
         plot.title = element_text(hjust = 0.5, size = 16),  # Increase plot title size
-        plot.subtitle = element_text(hjust = 0, size = 14),
+        plot.subtitle = element_text(hjust = 0.5, size = 14),
         axis.title.x = element_text(size = 14, face = "bold"),  # Increase x-axis title size
         axis.title.y = element_text(size = 14, face = "bold"),  # Increase y-axis title size
         axis.text.x = element_text(size = 14),  # Increase x-axis labels size
@@ -531,7 +531,7 @@ ggplot(tpe_glytd_comparison_data, aes(x = Category, y = Value, fill = Fund)) +
   theme(legend.title = element_blank(),
         legend.text = element_text(size = 14),  # Increase legend text size
         plot.title = element_text(hjust = 0.5, size = 16),  # Increase plot title size
-        plot.subtitle = element_text(hjust = 0, size = 14),
+        plot.subtitle = element_text(hjust = 0.5, size = 14),
         axis.title.x = element_text(size = 14, face = "bold"),  # Increase x-axis title size
         axis.title.y = element_text(size = 14, face = "bold"),  # Increase y-axis title size
         axis.text.x = element_text(size = 14),  # Increase x-axis labels size
@@ -581,7 +581,7 @@ ggplot(pcnt_final_data, aes(x = Category, y = Value, fill = Category)) +
   theme(legend.title = element_blank(),
         legend.text = element_text(size = 14),  # Increase legend text size
         plot.title = element_text(hjust = 0.5, size = 16),  # Increase plot title size
-        plot.subtitle = element_text(hjust = 0,size = 12),
+        plot.subtitle = element_text(hjust = 0.5,size = 12),
         axis.title.x = element_text(size = 14, face = "bold" ),  # Increase x-axis title size
         axis.title.y = element_text(size = 14, face = "bold"),  # Increase y-axis title size
         axis.text.x = element_text(size = 14),  # Increase x-axis labels size
@@ -629,7 +629,7 @@ ggplot(ays_gf_comparison_data, aes(x = Category, y = Value, fill = Category)) +
   theme(
     legend.title = element_blank(),
     legend.text = element_text(size = 14),
-    plot.subtitle = element_text(hjust = 0, size = 12),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
     plot.title = element_text(hjust = 0.5, size = 16),
     axis.title.x = element_text(size = 14, face = "bold"),  # Bold x-axis title
     axis.title.y = element_text(size = 14, face = "bold"),  # Bold y-axis title
@@ -680,7 +680,7 @@ ggplot(ays_sg_comparison_data, aes(x = Category, y = Value, fill = Category)) +
     legend.title = element_blank(),
     legend.text = element_text(size = 14),
     plot.title = element_text(hjust = 0.5, size = 16),
-    plot.subtitle = element_text(hjust = 0,size = 12),
+    plot.subtitle = element_text(hjust = 0.5,size = 12),
     axis.title.x = element_text(size = 14, face = "bold"),  # Bold x-axis title
     axis.title.y = element_text(size = 14, face = "bold"),  # Bold y-axis title
     axis.text.x = element_text(size = 12, angle = 45, hjust = 1),  # Rotate x-axis labels
@@ -733,7 +733,7 @@ ggplot(aystpe_comparison_data, aes(x = Category, y = Value, fill = Category)) +
     legend.title = element_blank(),
     legend.text = element_text(size = 14),
     plot.title = element_text(hjust = 0.5, size = 16),
-    plot.subtitle = element_text(hjust = 0,size = 12),
+    plot.subtitle = element_text(hjust = 0.5,size = 12),
     axis.title.x = element_text(size = 14, face = "bold"),  # Bold x-axis title
     axis.title.y = element_text(size = 14, face = "bold"),  # Bold y-axis title
     axis.text.x = element_text(size = 12, angle = 45, hjust = 1),  # Rotate x-axis labels

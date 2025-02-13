@@ -32,7 +32,7 @@ Reading in the files for the data that will be used for creating the plots that 
 # reading in the dataset for the summer_expense_report
 allbud_vs_actuals_files <- list.files(here(), pattern = "FY \\d{4} All Services Budget and Actual.*\\.xlsx", full.names = TRUE)
 
-# Read the latest file
+# read the latest file
 allbud_vs_actuals <- read.xlsx(allbud_vs_actuals_files)
 
 # set the first row as headers and remove it from the data
@@ -92,14 +92,14 @@ general_fund_results <- list()
 # --- loop through each Cost Center ---
 
 for (cost_center in gf_cost_center_list) {
-  # Filter data for the current cost center
+  # filter data for the current cost center
   cost_center_data <- all_general_fund |> filter(`Cost Center` == cost_center)
   
-  # Compute salary and non-salary projections
+  # compute salary and non-salary projections
   gf_salary_proj <- sum(as.numeric(cost_center_data$`Revised Budget`[str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
   gf_non_salary_proj <- sum(as.numeric(cost_center_data$`Revised Budget`[!str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
   
-  # Store results in a dataframe
+  # store results in a dataframe
   general_fund_results[[as.character(cost_center)]] <- data.frame(
     `Cost Center` = cost_center,
     `Salaries/OPC Projections` = gf_salary_proj,
@@ -130,14 +130,14 @@ state_fund_results <- list()
 # --- loop through each Cost Center ---
 
 for (cost_center in sf_cost_center_list) {
-  # Filter data for the current cost center
+  # filter data for the current cost center
   cost_center_data <- all_state_fund |> filter(`Cost Center` == cost_center)
   
-  # Compute salary and non-salary projections
+  # compute salary and non-salary projections
   sf_salary_proj <- sum(as.numeric(cost_center_data$`Revised Budget`[str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
   sf_non_salary_proj <- sum(as.numeric(cost_center_data$`Revised Budget`[!str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
   
-  # Store results in a dataframe
+  # store results in a dataframe
   state_fund_results[[as.character(cost_center)]] <- data.frame(
     `Cost Center` = cost_center,
     `Salaries/OPC Projections` = sf_salary_proj,
@@ -156,10 +156,12 @@ state_fund_summary_df <- bind_rows(state_fund_results)
 Combining the general and state funds for the tpe table. 
 
 ```{r tpetblone, warning=FALSE}
-# --- Bind the rows together ---
+# --- bind the rows together ---
+
 tpe_summary <- bind_rows(general_fund_summary_df, state_fund_summary_df)
 
-# --- Create the tpe_rb_final_tbl table ---
+# --- create the tpe_rb_final_tbl table ---
+
 tpe_rb_final_tbl <- tpe_summary |> 
   summarise(
     Salaries.OPC.Projections = sum(as.numeric(Salaries.OPC.Projections), na.rm = TRUE),
@@ -178,18 +180,20 @@ Here is a for loop that will automatically configure the key words that match up
 
 ```{r gfglyplot}
 # --- initialize list to store results ---
+
 glytd_general_fund_results <- list()
 
 # --- loop through each Cost Center ---
+
 for (cost_center in gf_cost_center_list) {
   # Filter data for the current cost center
   cost_center_data <- all_general_fund |> filter(`Cost Center` == cost_center)
   
-  # Compute salary and non-salary projections
+  # compute salary and non-salary projections
   glytd_salary_proj <- sum(as.numeric(cost_center_data$`GL YTD EXP`[str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
   glytd_non_salary_proj <- sum(as.numeric(cost_center_data$`GL YTD EXP`[!str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
   
-  # Store results in a dataframe and save in the list
+  # store results in a dataframe and save in the list
   glytd_general_fund_results[[as.character(cost_center)]] <- data.frame(
     `Cost Center` = cost_center,
     `Salaries/OPC Projections` = glytd_salary_proj,
@@ -216,14 +220,14 @@ glytd_state_fund_results <- list()
 # --- loop through each Cost Center ---
 
 for (cost_center in sf_cost_center_list) {
-  # Filter data for the current cost center
+  # filter data for the current cost center
   cost_center_data <- all_state_fund |> filter(`Cost Center` == cost_center)
   
-  # Compute salary and non-salary projections
+  # compute salary and non-salary projections
   glytd_sf_salary_proj <- sum(as.numeric(cost_center_data$`GL YTD EXP`[str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
   glytd_sf_non_salary_proj <- sum(as.numeric(cost_center_data$`GL YTD EXP`[!str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
   
-  # Store results in a dataframe
+  # store results in a dataframe
   glytd_state_fund_results[[as.character(cost_center)]] <- data.frame(
     `Cost Center` = cost_center,
     `Salaries/OPC Projections` = glytd_sf_salary_proj,
@@ -263,131 +267,94 @@ glytd_tpe_final_tbl <- glytd_tpe_summary |>
 This is for the Analysis Tables. Here is a for loop that will automatically configure the key words that match up with salaries and non spend categories for only the 1001 General Funds.
 
 ```{r antblone, warning=FALSE}
-# --- Initialize list to store results ---
+# --- General Fund Calculations ---
 
-alys_general_fund_results <- list()
+# calculate the salary sums based on the salary patterns
+alys_gf_salary_sum <- all_general_fund |> 
+  filter(str_detect(`Spend Category`, salary_pattern)) |> 
+  group_by(`Spend Category`) |> 
+  summarise(
+    `Remaining Balance - Salaries/OPC` = sum(as.numeric(`Remaining Balance`), na.rm = TRUE),
+    `Projected YE Value - Salaries/OPC` = sum(as.numeric(`Projected Y|E Value`), na.rm = TRUE),
+    `Sur/(Def) - Salaries/OPC` = sum(as.numeric(`Sur / (Def)`), na.rm = TRUE)
+  ) |> 
+  ungroup()
 
-# --- Loop through each Cost Center ---
+# calculate the non salary sums based on the salary patterns
+alys_gf_non_salary_sum <- all_general_fund |> 
+  filter(!str_detect(`Spend Category`, salary_pattern)) |> 
+  group_by(`Spend Category`) |> 
+  summarise(
+    `Remaining Balance - Other EXP` = sum(as.numeric(`Remaining Balance`), na.rm = TRUE),
+    `Projected YE Value - Other EXP` = sum(as.numeric(`Projected Y|E Value`), na.rm = TRUE),
+    `Sur/(Def) - Other EXP` = sum(as.numeric(`Sur / (Def)`), na.rm = TRUE)
+  ) |> 
+  ungroup()
 
-cost_center_list <- unique(all_general_fund$`Cost Center`)
+# bind the salary rows together and complete the summary table
+alys_gf_summary <- bind_rows(alys_gf_salary_sum, alys_gf_non_salary_sum)
 
-for (cost_center in cost_center_list) {
-  # Filter data for the current cost center
-  cost_center_data <- all_general_fund |> filter(`Cost Center` == cost_center)
-  
-  # Separate salary-related rows and non-salary-related rows
-  salary_rows <- cost_center_data |> 
-    filter(str_detect(`Spend Category`, salary_pattern))
-
-  non_salary_rows <- cost_center_data |> 
-    filter(!str_detect(`Spend Category`, salary_pattern))
-
-  # Calculate Salaries/OPC projections
-  salary_proj_remaining_balance <- sum(as.numeric(all_general_fund$`Remaining Balance`), na.rm = TRUE)
-  salary_proj_projected_value <- sum(as.numeric(all_general_fund$`Projected Y|E Value`), na.rm = TRUE)
-  salary_proj_sur_def <- sum(as.numeric(all_general_fund$`Sur / (Def)`), na.rm = TRUE)
-  
-  # Calculate Other EXP projections
-  non_salary_proj_remaining_balance <- sum(as.numeric(all_general_fund$`Remaining Balance`), na.rm = TRUE)
-  non_salary_proj_projected_value <- sum(as.numeric(all_general_fund$`Projected Y|E Value`), na.rm = TRUE)
-  non_salary_proj_sur_def <- sum(as.numeric(all_general_fund$`Sur / (Def)`), na.rm = TRUE)
-  
-  # Store results for this cost center in a data frame
-  alys_gf_summary <- data.frame(
-    `Cost Center` = cost_center,
-    `Remaining Balance - Salaries/OPC` = salary_proj_remaining_balance,
-    `Projected YE Value - Salaries/OPC` = salary_proj_projected_value,
-    `Sur/(Def) - Salaries/OPC` = salary_proj_sur_def,
-    `Remaining Balance - Other EXP` = non_salary_proj_remaining_balance,
-    `Projected YE Value - Other EXP` = non_salary_proj_projected_value,
-    `Sur/(Def) - Other EXP` = non_salary_proj_sur_def
+# make a final table with the data 
+alys_gf_final_tbl <- alys_gf_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(`Remaining Balance - Salaries/OPC`, na.rm = TRUE) +
+                                 sum(`Projected YE Value - Salaries/OPC`, na.rm = TRUE) +
+                                 sum(`Sur/(Def) - Salaries/OPC`, na.rm = TRUE),
+    
+    `Other EXP Projections` = sum(`Remaining Balance - Other EXP`, na.rm = TRUE) +
+                              sum(`Projected YE Value - Other EXP`, na.rm = TRUE) +
+                              sum(`Sur/(Def) - Other EXP`, na.rm = TRUE),
+    
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
   )
-  
-  # Store this cost center summary in the results list
-  alys_gf_final_tbl <- alys_gf_summary |> 
-    summarise(
-      `Salaries/OPC Projections` = sum(`Remaining.Balance...Salaries.OPC`, na.rm = TRUE) +
-                                   sum(`Projected.YE.Value...Salaries.OPC`, na.rm = TRUE) +
-                                   sum(`Sur..Def....Salaries.OPC`, na.rm = TRUE),
-      `Other EXP Projections` = sum(`Remaining.Balance...Other.EXP`, na.rm = TRUE) +
-                                sum(`Projected.YE.Value...Other.EXP`, na.rm = TRUE) +
-                                sum(`Sur..Def....Other.EXP`, na.rm = TRUE),
-      `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
-    )
-  
-  # Append the final table to the results list
-  alys_general_fund_results[[as.character(cost_center)]] <- alys_gf_final_tbl
-}
-
-# --- Combine all results into a final dataframe ---
-alys_general_fund_summary_df <- bind_rows(alys_general_fund_results) |> 
-  slice(1)
 ```
 
 
 ### Other Funds - 2089, 4000, and 5000 table
 This is for the Analysis Tables. Here is a for loop that will automatically configure the key words that match up with salaries and non spend categories for only the 5000 State Grant Funds.
 
+
 ```{r anlysofloop, warning=FALSE}
-# --- Initialize list to store results ---
+# --- State Funds Calculations ---
 
-alys_state_fund_results <- list()
+# calculate the salary sums based on the salary patterns
+alys_sf_salary_sum <- all_state_fund |> 
+  filter(str_detect(`Spend Category`, salary_pattern)) |> 
+  group_by(`Spend Category`) |> 
+  summarise(
+    `Remaining Balance - Salaries/OPC` = sum(as.numeric(`Remaining Balance`), na.rm = TRUE),
+    `Projected YE Value - Salaries/OPC` = sum(as.numeric(`Projected Y|E Value`), na.rm = TRUE),
+    `Sur/(Def) - Salaries/OPC` = sum(as.numeric(`Sur / (Def)`), na.rm = TRUE)
+  ) |> 
+  ungroup()
 
-# --- Loop through each Cost Center ---
+# calculate the non salary sums based on the salary patterns
+alys_sf_non_salary_sum <- all_state_fund |> 
+  filter(!str_detect(`Spend Category`, salary_pattern)) |> 
+  group_by(`Spend Category`) |> 
+  summarise(
+    `Remaining Balance - Other EXP` = sum(as.numeric(`Remaining Balance`), na.rm = TRUE),
+    `Projected YE Value - Other EXP` = sum(as.numeric(`Projected Y|E Value`), na.rm = TRUE),
+    `Sur/(Def) - Other EXP` = sum(as.numeric(`Sur / (Def)`), na.rm = TRUE)
+  ) |> 
+  ungroup()
 
-cost_center_list <- unique(all_state_fund$`Cost Center`)
+# bind the salary rows together and complete the summary table
+alys_sf_summary <- bind_rows(alys_sf_salary_sum, alys_sf_non_salary_sum)
 
-for (cost_center in cost_center_list) {
-  # Filter data for the current cost center
-  cost_center_data <- all_state_fund |> filter(`Cost Center` == cost_center)
-  
-  # Separate salary-related rows and non-salary-related rows
-  salary_rows <- cost_center_data |> 
-    filter(str_detect(`Spend Category`, salary_pattern))
-
-  non_salary_rows <- cost_center_data |> 
-    filter(!str_detect(`Spend Category`, salary_pattern))
-
-  # Calculate Salaries/OPC projections
-  salary_proj_remaining_balance <- sum(as.numeric(all_state_fund$`Remaining Balance`), na.rm = TRUE)
-  salary_proj_projected_value <- sum(as.numeric(all_state_fund$`Projected Y|E Value`), na.rm = TRUE)
-  salary_proj_sur_def <- sum(as.numeric(all_state_fund$`Sur / (Def)`), na.rm = TRUE)
-  
-  # Calculate Other EXP projections
-  non_salary_proj_remaining_balance <- sum(as.numeric(all_state_fund$`Remaining Balance`), na.rm = TRUE)
-  non_salary_proj_projected_value <- sum(as.numeric(all_state_fund$`Projected Y|E Value`), na.rm = TRUE)
-  non_salary_proj_sur_def <- sum(as.numeric(all_state_fund$`Sur / (Def)`), na.rm = TRUE)
-  
-  # Store results for this cost center in a data frame
-  alys_sf_summary <- data.frame(
-    `Cost Center` = cost_center,
-    `Remaining Balance - Salaries/OPC` = salary_proj_remaining_balance,
-    `Projected YE Value - Salaries/OPC` = salary_proj_projected_value,
-    `Sur/(Def) - Salaries/OPC` = salary_proj_sur_def,
-    `Remaining Balance - Other EXP` = non_salary_proj_remaining_balance,
-    `Projected YE Value - Other EXP` = non_salary_proj_projected_value,
-    `Sur/(Def) - Other EXP` = non_salary_proj_sur_def
+# make a final table with the data 
+alys_sf_final_tbl <- alys_sf_summary |> 
+  summarise(
+    `Salaries/OPC Projections` = sum(`Remaining Balance - Salaries/OPC`, na.rm = TRUE) +
+                                 sum(`Projected YE Value - Salaries/OPC`, na.rm = TRUE) +
+                                 sum(`Sur/(Def) - Salaries/OPC`, na.rm = TRUE),
+    
+    `Other EXP Projections` = sum(`Remaining Balance - Other EXP`, na.rm = TRUE) +
+                              sum(`Projected YE Value - Other EXP`, na.rm = TRUE) +
+                              sum(`Sur/(Def) - Other EXP`, na.rm = TRUE),
+    
+    `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
   )
-  
-  # Store this cost center summary in the results list
-  alys_sf_final_tbl <- alys_sf_summary |> 
-    summarise(
-      `Salaries/OPC Projections` = sum(`Remaining.Balance...Salaries.OPC`, na.rm = TRUE) +
-                                   sum(`Projected.YE.Value...Salaries.OPC`, na.rm = TRUE) +
-                                   sum(`Sur..Def....Salaries.OPC`, na.rm = TRUE),
-      `Other EXP Projections` = sum(`Remaining.Balance...Other.EXP`, na.rm = TRUE) +
-                                sum(`Projected.YE.Value...Other.EXP`, na.rm = TRUE) +
-                                sum(`Sur..Def....Other.EXP`, na.rm = TRUE),
-      `Total Projections` = `Salaries/OPC Projections` + `Other EXP Projections`
-    )
-  
-  # Append the final table to the results list
-  alys_state_fund_results[[as.character(cost_center)]] <- alys_sf_final_tbl
-}
-
-# --- Combine all results into a final dataframe ---
-alys_state_fund_summary_df <- bind_rows(alys_state_fund_results) |> 
-  slice(1)
 ```
 
 
@@ -397,7 +364,7 @@ This is for the Analysis Tables. Combining the general and state funds for the t
 ```{r antpe, warning=FALSE}
 # --- bind the rows together ---
 
-alys_tpe_summary <- bind_rows(alys_general_fund_summary_df, alys_state_fund_summary_df) 
+alys_tpe_summary <- bind_rows(alys_gf_final_tbl, alys_sf_final_tbl) 
 
 # --- create the final TPE table ---
 
@@ -431,7 +398,6 @@ pcnt_final_tbl <- tibble(
 ```
 
 
-
 #####
 ### Plotting the data for visulzations
 
@@ -454,8 +420,8 @@ The plot below will compare the GF and the GLYTD EXP General Funds 1001 data tog
 
 *First table compares the General Fund 1001 and the GL YTD EXP General Fund*
 
-```{r gfirstplot}
-# format in long 
+```{r gfirstplot, message=FALSE, warning=FALSE}
+# Step 1: construct Comparison Data Frame Correctly
 gf_glytd_comparison_data <- data.frame(
   Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(general_fund_summary_df) * 2),
   Fund = rep(c("1001 General Funds", "GL YTD 1001 General Funds"), each = nrow(general_fund_summary_df), times = 2),
@@ -463,12 +429,12 @@ gf_glytd_comparison_data <- data.frame(
             general_fund_summary_df$Other.EXP.Projections, glytd_general_fund_summary_df$Other.EXP.Projections)
 )
 
-# Step 2: Sum the Revised Budget from both of the salary and non salary rows because these contain the revised budget totals
+# Step 2: sum the Revised Budget from both of the salary and non salary rows because these contain the revised budget totals
 total_projections_gf <- sum(as.numeric(gf_salary_proj), na.rm = TRUE) + 
                         sum(as.numeric(gf_non_salary_proj), na.rm = TRUE)
 
 
-# Step 3: Create the stacked horizontal bar chart with two threshold lines
+# Step 3: create the stacked horizontal bar chart with two threshold lines
 ggplot(gf_glytd_comparison_data, aes(x = Category, y = Value, fill = Fund)) +
   geom_bar(stat = "identity", position = "stack") +  # Stacked bars
   geom_segment(aes(x = 1, xend = 2.5, y = total_projections_gf, yend = total_projections_gf), 
@@ -502,9 +468,8 @@ The plot below will compare the State Grants Fund and the GLYTD EXP 5000 State G
 
 *Second table compares the Other Funds - 2089, 4000,  and 5000 and the GL YTD EXP State Grants*
 
-```{r sf_sfglyt_plot, warning=FALSE}
-
-# format in long 
+```{r sf_sfglyt_plot, message=FALSE, warning=FALSE}
+# Step 1: construct Comparison Data Frame Correctly
 sg_glytd_comparison_data <- data.frame(
   Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(state_fund_summary_df) * 2),
   Fund = rep(c("5000 State Grants Funds", "GL YTD 5000 State Grants Funds"), each = nrow(state_fund_summary_df), times = 2),
@@ -515,12 +480,12 @@ sg_glytd_comparison_data <- data.frame(
 )
 
 
-# Step 2: Sum the Revised Budget from both of the salary and non salary rows because these contain the revised budget totals
+# Step 2: sum the Revised Budget from both of the salary and non salary rows because these contain the revised budget totals
 total_projections_sg <-  sum(as.numeric(sf_salary_proj), na.rm = TRUE) + 
                         sum(as.numeric(sf_non_salary_proj), na.rm = TRUE)
 
 
-# Step 3: Create the stacked horizontal bar chart with two threshold lines
+# Step 3: create the stacked horizontal bar chart with two threshold lines
 ggplot(sg_glytd_comparison_data, aes(x = Category, y = Value, fill = Fund)) +
   geom_bar(stat = "identity", position = "stack") +  # Stacked bars
   geom_segment(aes(x = 1, xend = 2.5, y = total_projections_sg, yend = total_projections_sg), 
@@ -553,9 +518,8 @@ The plot below will compare the General Grants Fund and the GLYTD EXP 5000 State
 
 *Third table compares the Total Projections Equals to Row 268 and GL YTD EXP General Fund 1001*
 
-
-```{r tpe_plot, warning=FALSE}
-# Step 1: Construct Comparison Data Frame Correctly
+```{r tpe_plot, message=FALSE, warning=FALSE}
+# Step 1: construct Comparison Data Frame Correctly
 tpe_glytd_comparison_data <- data.frame(
   Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), times = 2),  # Repeat twice per fund
   
@@ -568,12 +532,12 @@ tpe_glytd_comparison_data <- data.frame(
   )  # Ensure values align correctly
 )
 
-# Step 2: Sum the Revised Budget Correctly
+# Step 2: sum the Revised Budget Correctly
 total_projections_tpe <- sum(as.numeric(tpe_rb_final_tbl$Total.Projections), na.rm = TRUE) + 
                          sum(as.numeric(glytd_tpe_final_tbl$Total.Projections), na.rm = TRUE)
 
 
-# Step 3: Create the stacked horizontal bar chart with two threshold lines
+# Step 3: create the stacked horizontal bar chart with two threshold lines
 ggplot(tpe_glytd_comparison_data, aes(x = Category, y = Value, fill = Fund)) +
   geom_bar(stat = "identity", position = "stack") +  # Stacked bars
   geom_segment(aes(x = 1, xend = 2.5, y = total_projections_tpe, yend = total_projections_tpe), 
@@ -607,8 +571,8 @@ The plot below will compare the glytd and tp data in the Percentage of Budget De
 *Fourth table shows the Percent of Budget Depleted YTD Table Data*
 
 
-```{r pct_plot, warning=FALSE}
-# create a percentage comparison dataframe
+```{r pct_plot, message=FALSE, warning=FALSE}
+# Step 1: create a percentage comparison dataframe
 all_pcnt_final_data <- data.frame(
   Category = rep(c("Total Salaries", "Total Expenses", "Overall Total"), each = nrow(pcnt_final_tbl)),  
   Fund = rep("GL YTD EXP 1001 General & 5000 State Grants Funds", nrow(pcnt_final_tbl) * 3),  # Repeat the fund name for each category
@@ -620,13 +584,12 @@ all_pcnt_final_data <- data.frame(
 )
 
 
-# Step 2: Calculate the total revised budget for the first rows defined in the dataset
-# Sum the Revised Budget from both gf_first_rows and gf_remaining_rows
+# Step 2: calculate the total revised budget for the first rows defined in the dataset
 total_projections_sg <- sum(as.numeric(sf_salary_proj), na.rm = TRUE) + 
                         sum(as.numeric(sf_non_salary_proj), na.rm = TRUE)
 
 
-# Step 3: Create the stacked horizontal bar chart with two threshold lines
+# Step 3: create the stacked horizontal bar chart with two threshold lines
 ggplot(all_pcnt_final_data, aes(x = Category, y = Value, fill = Category)) +
   geom_bar(stat = "identity", position = "dodge") +  # Side-by-side bars (non-stacked)
   labs(title = "Percentage of Budget Depleted YTD Comparisons",
@@ -659,19 +622,19 @@ ggsave("Charts/all_pct_tbl.png",width = 18, height = 16, dpi = 300)
 The plot below will compare the Analysis table General Fund data together. The `ays_gf_comparison_data` includes the spending categories that are within the 1001 General Grants. This will show which if the budget is close or over for the total overall budget of the spending categories. 
 
 
-```{r anlys_gf_plot, warning=FALSE}
-# Create the comparison data for plotting
+```{r anlys_gf_plot, message=FALSE, warning=FALSE}
+# Step 1: create the comparison data for plotting
 ays_gf_comparison_data <- data.frame(
-  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(alys_general_fund_summary_df)),  
-  Fund = rep("1001 General Grants Fund", times = 2 * nrow(alys_general_fund_summary_df)),  
+  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(alys_gf_final_tbl)),  
+  Fund = rep("1001 General Grants Fund", times = 2 * nrow(alys_gf_final_tbl)),  
   Value = c(
-    alys_general_fund_summary_df$`Salaries/OPC Projections`,
-    alys_general_fund_summary_df$`Other EXP Projections`
+    alys_gf_final_tbl$`Salaries/OPC Projections`,
+    alys_gf_final_tbl$`Other EXP Projections`
   )
 )
 
 
-# Step 2: Create the non-stacked horizontal bar chart with custom colors and bold axis titles
+# Step 2: create the non-stacked horizontal bar chart with custom colors and bold axis titles
 ggplot(ays_gf_comparison_data, aes(x = Category, y = Value, fill = Category)) +
   geom_bar(stat = "identity", position = "dodge") +  # Non-stacked bars (side-by-side)
   scale_fill_manual(values = c("Salaries/OPC Projections" = "steelblue", 
@@ -703,21 +666,21 @@ ggsave("Charts/all_ays_gf_comparison_data.png",width = 18, height = 16, dpi = 30
 *Sixth table compares the Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis Other Funds - 2089, 4000, and 5000 table*
 
 ### Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis Other Funds - 2089, 4000,  and 5000 table plot
-The plot below will compare the Analysis table General Fund data together. The `ays_sg_comparison_data` includes the spending categories that are within the 5000 State Grants Fund. This will show which if the budget is close or over for the total overall budget of the spending categories. 
+The plot below will compare the Analysis table General Fund data together. The `ays_sf_comparison_data` includes the spending categories that are within the 5000 State Grants Fund. This will show which if the budget is close or over for the total overall budget of the spending categories. 
 
 
-```{r anlys_gf_plot, warning=FALSE}
-# Create the comparison data for plotting
+```{r anlys_gf_plot, message=FALSE, warning=FALSE}
+# Step 1: create the comparison data for plotting
 ays_sf_comparison_data <- data.frame(
-  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(alys_state_fund_summary_df)),  
-  Fund = rep("1001 General Grants Fund", times = 2 * nrow(alys_state_fund_summary_df)),  
+  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), each = nrow(alys_sf_final_tbl)),  
+  Fund = rep("1001 General Grants Fund", times = 2 * nrow(alys_sf_final_tbl)),  
   Value = c(
-    alys_state_fund_summary_df$`Salaries/OPC Projections`,
-    alys_state_fund_summary_df$`Other EXP Projections`
+    alys_sf_final_tbl$`Salaries/OPC Projections`,
+    alys_sf_final_tbl$`Other EXP Projections`
   )
 )
 
-# Step 2: Create the non-stacked horizontal bar chart with custom colors and bold axis titles
+# Step 2: create the non-stacked horizontal bar chart with custom colors and bold axis titles
 ggplot(ays_sf_comparison_data, aes(x = Category, y = Value, fill = Category)) +
   geom_bar(stat = "identity", position = "dodge") +  # Non-stacked bars (side-by-side)
   scale_fill_manual(values = c("Salaries/OPC Projections" = "steelblue", 
@@ -742,57 +705,6 @@ ggplot(ays_sf_comparison_data, aes(x = Category, y = Value, fill = Category)) +
 # save the plot
 ggsave("Charts/all_ays_sg_comparison_data.png",width = 18, height = 16, dpi = 300)  
 ```
-
-
-
-*Seventh table compares the Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis Total Projections equals to row 268 table*
-
-### Remaining Balance, Sur/ Def, and Projected Y|E Value for the Analysis Total Projections equals to row 268 plot
-The plot below will compare the Analysis table General Fund data together. The `aystpe_comparison_data` includes the spending categories that are within the 1001 General Grants. This will show which if the budget is close or over for the total overall budget of the spending categories. 
-
-
-```{r anlys_tpe_plot, warning=FALSE}
-# Create the comparison data for plotting
-aystpe_comparison_data <- data.frame(
-  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections"), times = 2),  # Repeat twice per fund
-  
-  Fund = rep(c("1001 General Grants Fund", "GL YTD EXP 1001 General Grants Fund",
-               "5000 State Grants Fund", "GL YTD EXP 5000 State Grants Fund"), each = 2),  # Repeat each twice
-  
-  Value = c(
-    ays_gf_comparison_data$Category, glytd_tpe_final_tbl$Salaries.OPC.Projections,
-    ays_gf_comparison_data$Other.EXP.Projections, glytd_tpe_final_tbl$Other.EXP.Projections
-  )  # Ensure values align correctly
-)
-
-# Step 2: Create the non-stacked horizontal bar chart with custom colors and bold axis titles
-ggplot(aystpe_comparison_data, aes(x = Category, y = Value, fill = Category)) +
-  geom_bar(stat = "identity", position = "dodge") +  # Non-stacked bars (side-by-side)
-  scale_fill_manual(values = c("Salaries/OPC Projections" = "steelblue", 
-                               "Other EXP Projections" = "darkgreen")) +  # Custom colors
-  scale_y_continuous(labels = label_dollar()) +  # Format y-axis values with dollar signs and commas
-  coord_flip()+
-  labs(title = "Analysis Table Total Projections Equals to Row 268 Comparisons",
-       subtitle = "1001 General Funds and 5000 State Grant Funds",
-       x = "Category",
-       y = "Amount") +
-  theme_minimal() +
-  theme(
-    legend.title = element_blank(),
-    legend.text = element_text(size = 18),
-    plot.subtitle = element_text(hjust = 0.5, size = 16),
-    plot.title = element_text(hjust = 0.5, size = 18),
-    axis.title.x = element_text(size = 18, face = "bold"),  # Bold x-axis title
-    axis.title.y = element_text(size = 18, face = "bold"),  # Bold y-axis title
-    axis.text.x = element_text(size = 18, angle = 45, hjust = 1),  # Rotate x-axis labels
-    axis.text.y = element_text(size = 18)
-  )
-
-# save the plot
-ggsave("Charts/all_ays_tpe_comparison_data.png",width = 18, height = 16, dpi = 300)  
-```
-
-
 
 
 
