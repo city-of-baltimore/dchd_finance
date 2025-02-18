@@ -22,7 +22,7 @@ library(lubridate)
 
 
 ## Reading in the data 
-Reading in the files for the data that will be used. Put new data files in the "Data" folder and replace the file names below with the names of the new files.
+Reading in the files for the data that will be used. Put new data files in the "Data" folder and the script will automatically detect the latest file within the Data folder.
 
 ```{r data}
 # get the latest files in the data folder
