@@ -35,7 +35,7 @@ gl_file_name <- basename(get_latest_file("GL-Operating Actual Expenses YTD .* ES
 budg_vs_act_file_name <- basename(get_latest_file("Budget_vs_Actuals_-_BBMR YTD .*\\.xlsx$"))
 
 # read data from files
-gl_data <- readxl::read_xlsx(here("Data", gl_file_name), 
+all_gl_data <- readxl::read_xlsx(here("Data", gl_file_name), 
                              skip = 13,
                              col_types = c(rep("text",2),   
                                            "date", 
@@ -162,7 +162,7 @@ all_expense_report_tbl <- all_expense_report_tbl |>
             by = c("Spend Category" = "Spend Category as Worktag", 
                    "Cost Center" = "Cost Center", 
                    "Fund" = "Fund")) |> 
-  rename(`Total Expenditures` = `Total Actuals`) |> 
+  rename(`BBMR Total Expenditures` = `Total Actuals`) |> 
   mutate(`GL YTD EXP` = if_else(is.na(`GL YTD EXP`), 0, `GL YTD EXP`)) 
 ```
 
@@ -273,7 +273,7 @@ all_expense_report_tbl <- all_expense_report_tbl |>
 
 # move the Total EXP column to after the GL column
 all_expense_report_tbl <- all_expense_report_tbl |> 
-  relocate(`Total Expenditures`, .after = `GL YTD EXP`)
+  relocate(`BBMR Total Expenditures`, .after = `GL YTD EXP`)
 
 
 # only keep the columns that are needed for this table
