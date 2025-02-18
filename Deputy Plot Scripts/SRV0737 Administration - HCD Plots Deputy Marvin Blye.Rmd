@@ -28,31 +28,27 @@ library(lubridate)
 Reading in the files for the data that will be used. Put new data files in the "Data" folder and replace the file names below with the names of the new files.
 
 ```{r data}
-# read in the data
-# change the name of this file to represent the newest file downloaded
-budg_vs_act_file_name <- "Budget_vs_Actuals_-_BBMR YTD 2024-12-19.xlsx"
+# get the latest files in the data folder
+get_latest_file <- function(pattern) {
+  files <- list.files(path = "Data", pattern = pattern, full.names = TRUE)
+  return(files[order(file.info(files)$mtime, decreasing = TRUE)][1])
+}
 
-# the first row of the data file is mostly empty except for a few important dates. 
-first_row_of_data <- readxl::read_xlsx(here("Data", budg_vs_act_file_name)) |> 
-  names() 
+# assigning the names of the latest files to the new variables
+budg_vs_act_file_name <- basename(get_latest_file("Budget_vs_Actuals_-_BBMR YTD .*\\.xlsx$"))
 
-# read those data and do some formatting to clean up the data
-name_prefixes <- tibble(first_row_of_data) |> 
-  mutate(prefixes = ifelse(str_detect(first_row_of_data, "\\.\\."), 
-                          NA_character_, 
-                          first_row_of_data)) |> 
-fill(prefixes, .direction = "down") |> 
-  pull(prefixes)
 
 # read the data file again but skip the first line
-budg_vs_actuals <- readxl::read_xlsx(here("Data", budg_vs_act_file_name),
-                  skip = 1)
+budg_vs_actuals <- 
+  readxl::read_xlsx(here("Data", budg_vs_act_file_name),
+                    skip = 1)
 
-#dropping the total budget row as this is not needed and will mess up the data
+# remove the total budget row as this is not needed 
+# and will mess up the data. 
 budg_vs_actuals <- budg_vs_actuals |> 
-  filter(`Cost Center` != "Total")
+  filter(`Cost Center` != "Total") 
 
-# the names in the file repeat themselves, but this combines the dates with the repetative names
+# the names in the file repeat themselves, but this combines the dates with the repetitive names
 for(i in seq_along(name_prefixes)){
   plain_name <- gsub("\\.\\..*","", names(budg_vs_actuals)[i]) 
   
@@ -62,7 +58,12 @@ for(i in seq_along(name_prefixes)){
            paste(plain_name,name_prefixes[i], sep = "_"))
 }
 
- names(budg_vs_actuals)
+# remove commitments and obligations since we dont need them
+budg_vs_actuals <- budg_vs_actuals |> 
+  select(-matches("^Commitments|^Obligations"))
+
+# looking at the new names 
+names(budg_vs_actuals)
 ```
 
 # Plots for Deputy Dr. Marvin Blye
