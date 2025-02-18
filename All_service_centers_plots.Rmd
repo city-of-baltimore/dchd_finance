@@ -29,14 +29,25 @@ library(ggplot2)
 Reading in the files for the data that will be used for creating the plots that will represent the data on the bottom of the `754 SFSP Expense Report`.
 
 ```{r readingdata}
-# reading in the dataset for the summer_expense_report
-allbud_vs_actuals_files <- list.files(here(), pattern = "FY \\d{4} All Services Budget and Actual.*\\.xlsx", full.names = TRUE)
+# Function to get the latest file matching a pattern
+get_latest_file <- function(pattern) {
+  files <- list.files(here(), pattern = pattern, full.names = TRUE)
+  if (length(files) == 0) stop("No matching files found.")
+  latest_file <- files[order(file.info(files)$mtime, decreasing = TRUE)][1]
+  return(latest_file)
+}
 
-# read the latest file
-allbud_vs_actuals <- read.xlsx(allbud_vs_actuals_files)
+# Find the latest "All Services Budget and Actual" file
+latest_allbud_vs_actuals_file <- get_latest_file("FY \\d{4} All Services Budget and Actual.*\\.xlsx")
 
-# set the first row as headers and remove it from the data
-allbud_vs_actuals <- setNames(allbud_vs_actuals[-1, ], as.character(unlist(allbud_vs_actuals[1, ])))  
+# Read the latest file
+allbud_vs_actuals <- read.xlsx(latest_allbud_vs_actuals_file)
+
+# Set the first row as headers and remove it from the data
+allbud_vs_actuals <- setNames(allbud_vs_actuals[-1, ], as.character(unlist(allbud_vs_actuals[1, ])))
+
+# Output the first few rows to verify
+print(head(allbud_vs_actuals))
 ```
 
 
