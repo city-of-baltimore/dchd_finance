@@ -26,15 +26,25 @@ library(ggplot2)
 Reading in the files for the data that will be used for creating the plots that will represent the data on the bottom of the `754 SFSP Expense Report`.
 
 ```{r readingdata}
-# reading in the dataset for the summer_expense_report
-# this will find the file with the budget and actual pattern.
-bud_vs_actuals_files <- list.files(here(), pattern = "FY \\d{4} Budget and Actual.*\\.xlsx", full.names = TRUE)
+# Function to get the latest file matching a pattern
+get_latest_file <- function(pattern) {
+  files <- list.files(here(), pattern = pattern, full.names = TRUE)
+  if (length(files) == 0) stop("No matching files found.")
+  latest_file <- files[order(file.info(files)$mtime, decreasing = TRUE)][1]
+  return(latest_file)
+}
+
+# Find the latest Budget and Actual file
+latest_bud_vs_actuals_file <- get_latest_file("FY \\d{4} Budget and Actual.*\\.xlsx")
 
 # Read the latest file
-bud_vs_actuals <- read.xlsx(bud_vs_actuals_files)
+bud_vs_actuals <- read.xlsx(latest_bud_vs_actuals_file)
 
-# set the first row as headers and remove it from the data
+# Set the first row as headers and remove it from the data
 bud_vs_actuals <- setNames(bud_vs_actuals[-1, ], as.character(unlist(bud_vs_actuals[1, ])))
+
+# Output the first few rows to verify
+print(head(bud_vs_actuals))
 ```
 
 
