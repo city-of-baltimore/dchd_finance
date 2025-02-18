@@ -164,7 +164,7 @@ expense_report_tbl <- expense_report_tbl |>
             by = c("Spend Category" = "Spend Category as Worktag", 
                    "Cost Center" = "Cost Center", 
                    "Fund" = "Fund")) |> 
-  rename(`Total Expenditures` = `Total Actuals`) |> 
+  rename(`BBMR Total Expenditures` = `Total Actuals`) |> 
   mutate(`GL YTD EXP` = if_else(is.na(`GL YTD EXP`), 0, `GL YTD EXP`)) 
 ```
 
@@ -188,7 +188,7 @@ all_expense_rep <- expense_report_tbl |>
 summer_expense_rep <- all_expense_rep |> 
   filter(str_detect(`Cost Center`, "Summer")) |> 
   relocate(`Spend Category`, .after = `Cost Center`) |> 
-  relocate(`Total Expenditures`, .after = `GL YTD EXP`) |> 
+  relocate(`BBMR Total Expenditures`, .after = `GL YTD EXP`) |> 
   mutate(`GL YTD EXP` = round(`GL YTD EXP`, 2))  # rounds to 2 decimal places
 ```
 
