@@ -21,16 +21,21 @@ library(lubridate)
 ```
 
 ## Reading in the data 
-Reading in the files for the data that will be used. Put new data files in the "Data" folder and replace the file names below with the names of the new files.
+Reading in the files for the data that will be used. Put new data files in the "Data" folder and the script will automatically detect the latest file within the Data folder.
 
 ```{r data}
-# change the names of these files to represent the newest file downloaded
-gl_file_name <- "GL-Operating Actual Expenses YTD 2024-12-19 13_03 EST.xlsx"
+# get the latest files in the data folder
+get_latest_file <- function(pattern) {
+  files <- list.files(path = "Data", pattern = pattern, full.names = TRUE)
+  return(files[order(file.info(files)$mtime, decreasing = TRUE)][1])
+}
 
-budg_vs_act_file_name <- "Budget_vs_Actuals_-_BBMR YTD 2024-12-19.xlsx" 
+# assigning the names of the latest files to the new variables
+gl_file_name <- basename(get_latest_file("GL-Operating Actual Expenses YTD .* EST\\.xlsx$"))
+budg_vs_act_file_name <- basename(get_latest_file("Budget_vs_Actuals_-_BBMR YTD .*\\.xlsx$"))
 
 # read data from files
-all_gl_data <- readxl::read_xlsx(here("Data", gl_file_name), 
+gl_data <- readxl::read_xlsx(here("Data", gl_file_name), 
                              skip = 13,
                              col_types = c(rep("text",2),   
                                            "date", 
@@ -39,12 +44,11 @@ all_gl_data <- readxl::read_xlsx(here("Data", gl_file_name),
                                            rep("text",26))) |> 
   mutate(`Accounting Date` = as.Date(`Accounting Date`))
 
-
 # the first row of the data file is mostly empty except for a few important dates. 
 # read those data and do some formatting to clean up the data
 first_row_of_data <- 
   readxl::read_xlsx(here("Data", budg_vs_act_file_name)) |> 
-  names() 
+  names()
 
 # take out the data that is before the numeric values
 name_prefixes <- 
@@ -78,14 +82,12 @@ for(i in seq_along(name_prefixes)){
            paste(plain_name,name_prefixes[i], sep = "_"))
 }
 
-
-
 # remove commitments and obligations since we dont need them
 budg_vs_actuals <- budg_vs_actuals |> 
   select(-matches("^Commitments|^Obligations"))
 
-
- names(budg_vs_actuals)
+# looking at the new names 
+names(budg_vs_actuals)
 ```
 
 
