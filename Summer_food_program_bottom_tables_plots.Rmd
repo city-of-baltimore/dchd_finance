@@ -38,10 +38,18 @@ get_latest_file <- function(pattern) {
 latest_bud_vs_actuals_file <- get_latest_file("FY \\d{4} Budget and Actual.*\\.xlsx")
 
 # Read the latest file
-bud_vs_actuals <- read.xlsx(latest_bud_vs_actuals_file)
+bud_vs_actuals <- readxl::read_xlsx(latest_bud_vs_actuals_file)
 
 # Set the first row as headers and remove it from the data
 bud_vs_actuals <- setNames(bud_vs_actuals[-1, ], as.character(unlist(bud_vs_actuals[1, ])))
+
+# assign the NA values to be blanks or ""
+bud_vs_actuals[is.na(bud_vs_actuals)] <- "blank"
+
+colnames(bud_vs_actuals) <- ifelse(colnames(bud_vs_actuals) == "" | is.na(colnames(bud_vs_actuals)), 
+                                    paste0("Column_", seq_along(colnames(bud_vs_actuals))), 
+                                    colnames(bud_vs_actuals))
+
 
 # Output the first few rows to verify
 print(head(bud_vs_actuals))
