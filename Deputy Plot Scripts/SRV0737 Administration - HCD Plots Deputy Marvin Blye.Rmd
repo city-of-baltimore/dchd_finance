@@ -22,26 +22,41 @@ library(DT)
 library(openxlsx)
 library(stringr)
 library(lubridate)
+library(tvthemes)
+library(PrettyCols)
+library(paletteer)
 ```
 
 ## Reading in the data 
 Reading in the files for the data that will be used. Put new data files in the "Data" folder and replace the file names below with the names of the new files.
 
 ```{r data}
-# get the latest files in the data folder
+# Function to get the latest file in the data folder based on a pattern
 get_latest_file <- function(pattern) {
-  files <- list.files(path = "Data", pattern = pattern, full.names = TRUE)
-  return(files[order(file.info(files)$mtime, decreasing = TRUE)][1])
+  files <- list.files(here("Data"), pattern = pattern, full.names = TRUE)
+  if (length(files) == 0) return(NULL)  # Handle case when no file matches
+  latest_file <- files[order(file.info(files)$mtime, decreasing = TRUE)][1]
+  return(latest_file)
 }
 
-# assigning the names of the latest files to the new variables
-budg_vs_act_file_name <- basename(get_latest_file("Budget_vs_Actuals_-_BBMR YTD .*\\.xlsx$"))
+# Get the latest Budget vs Actuals file
+budg_vs_act_file <- get_latest_file("Budget_vs_Actuals_-_BBMR YTD .*\\.xlsx$")
 
+# the first row of the data file is mostly empty except for a few important dates. 
+# read those data and do some formatting to clean up the data
+first_row_of_data <- readxl::read_xlsx(budg_vs_act_file, col_names = T) |> names()
 
-# read the data file again but skip the first line
-budg_vs_actuals <- 
-  readxl::read_xlsx(here("Data", budg_vs_act_file_name),
-                    skip = 1)
+# Extract prefixes for column names
+name_prefixes <- tibble(first_row_of_data) |> 
+  mutate(prefixes = ifelse(str_detect(first_row_of_data, "\\.\\."), 
+                           NA_character_, 
+                           first_row_of_data)) |> 
+  fill(prefixes, .direction = "down") |> 
+  mutate(prefixes = ifelse(is.na(prefixes), NA_character_, paste0(prefixes, "-01"))) |> 
+  pull(prefixes)
+
+# Read the full dataset, skipping the first row
+budg_vs_actuals <- readxl::read_xlsx(budg_vs_act_file, skip = 1)
 
 # remove the total budget row as this is not needed 
 # and will mess up the data. 
@@ -61,6 +76,12 @@ for(i in seq_along(name_prefixes)){
 # remove commitments and obligations since we dont need them
 budg_vs_actuals <- budg_vs_actuals |> 
   select(-matches("^Commitments|^Obligations"))
+
+# remove columns that have nulls for all values 
+# replace "blank" with an actual 'null' value
+budg_vs_actuals <- budg_vs_actuals |> 
+  select_if(~sum(!is.na(.)) > 0) |> 
+  mutate(Grant = ifelse(Grant == "(Blank)", NA_character_, Grant))
 
 # looking at the new names 
 names(budg_vs_actuals)
@@ -88,7 +109,7 @@ The plot below will show negative spending for service types & Cost Center vs. t
 
 ```{r totspentnegplot}
 # filter the dataset for negative spending values
-admin_nh_negative_spending <- budg_vs_actuals |>
+admin_mb_negative_spending <- budg_vs_actuals |>
   filter(
     Service == "SRV0737 Administration - HCD" &
     `Cost Center` %in% c("CCA000310 Housing Budget and Accounting (HCD)",
@@ -104,7 +125,7 @@ admin_nh_negative_spending <- budg_vs_actuals |>
   )
 
 # plotting data below for different perspectives
-admin_nh_tot_neg_ccenter <- ggplot(admin_nh_negative_spending, aes(x = reorder(`Cost Center`, `Total Spent`), y = `Total Spent`)) +
+admin_mb_tot_neg_ccenter <- ggplot(admin_mb_negative_spending, aes(x = reorder(`Cost Center`, `Total Spent`), y = `Total Spent`)) +
   geom_col(fill = "red", width = 0.5) +  # Adjust bar width for better aesthetics
   theme_minimal() +  # Minimalistic theme
   scale_y_reverse(labels = scales::dollar) +  # Reverse y-axis and format with dollar labels
@@ -129,10 +150,10 @@ admin_nh_tot_neg_ccenter <- ggplot(admin_nh_negative_spending, aes(x = reorder(`
   )
 
 # display the plot
-print(admin_nh_tot_neg_ccenter)
+print(admin_mb_tot_neg_ccenter)
 
 # saving the plot
-ggsave("plots/admin_nh_tot_neg_ccenter_deputy_marvin.pdf", 
+ggsave("admin_mb_tot_neg_ccenter_deputy_marvin.pdf", 
        width = 30, height = 20)
 ```
 
@@ -142,7 +163,7 @@ This plot below will show the spending drilled down further by the Spend Categor
 
 ```{r spendcat}
 # plotting data below for different perspectives
-admin_nh_tot_neg_spcat <- ggplot(admin_nh_negative_spending, aes(x = reorder(`Spend Category`, `Total Spent`), y = `Total Spent`)) +
+admin_mb_tot_neg_spcat <- ggplot(admin_mb_negative_spending, aes(x = reorder(`Spend Category`, `Total Spent`), y = `Total Spent`)) +
   geom_col(fill = "red", width = 0.5) +  # Adjust bar width for better aesthetics
   theme_minimal() +
   scale_y_reverse(labels = scales::dollar) +  # Reverse y-axis and format with dollar labels
@@ -167,19 +188,19 @@ admin_nh_tot_neg_spcat <- ggplot(admin_nh_negative_spending, aes(x = reorder(`Sp
   )
 
 # display the plot
-print(admin_nh_tot_neg_spcat)
+print(admin_mb_tot_neg_spcat)
 
 # saving the plot
-ggsave("plots/admin_nh_tot_neg_spcat_deputy_marvin.pdf", 
+ggsave("admin_mb_tot_neg_spcat_deputy_marvin.pdf", 
        width = 30, height = 20)
 ```
 
 ## Actual Spending by month
 The plot below will show spending for service types and the actual spent for a specific month.
 
-```{r monthplot}
+```{r monthplot, warning=FALSE, message=FALSE}
 # filter the dataset for the actual spent
-admin_nh_actual_spent <- budg_vs_actuals |>
+admin_mb_actual_spent <- budg_vs_actuals |>
   filter(
     Service == "SRV0737 Administration - HCD" &
     `Cost Center` %in% c("CCA000310 Housing Budget and Accounting (HCD)",
@@ -194,44 +215,73 @@ admin_nh_actual_spent <- budg_vs_actuals |>
   )
 
 # calculate the maximum spending for each cost center
-admin_nh_max_spent_data <- admin_nh_actual_spent |> 
-  group_by(`Cost Center`) |> 
-  filter(`Actuals_2024-07` == max(`Actuals_2024-07`)) |> 
-  ungroup()
+admin_mb_actual_spent_long <- admin_mb_actual_spent |> 
+  pivot_longer(
+    cols = starts_with("Actuals_"),  
+    names_to = "Month", 
+    values_to = "Actual_Spent"
+  ) |> 
+  mutate(Month = str_remove(Month, "Actuals_")) |>  # Remove "Actuals_" prefix
+  mutate(Month = gsub("\\.", "-", Month)) |>  # Replace dot with hyphen
+  mutate(Month = as.Date(paste0(Month, "-01"), format = "%Y-%m-%d"))  # Convert to Date format with a default day (01)
 
-# create a plot showing Actuals spent for July or a different plot
-# by Cost center with positive (blue)
-admin_nh_july_spending_plot <- ggplot(admin_nh_max_spent_data, aes(x = `Cost Center`, y = `Actuals_2024-07`)) +
-  geom_col(fill = "blue", width = 0.5) +  # Set all bars to blue
+
+# Ensure the Month column has valid entries and remove any rows with NA values
+admin_mb_actual_spent_long <- admin_mb_actual_spent_long |> 
+  filter(!is.na(Month))
+
+# Now, create a sequence of months from the minimum to the current month
+full_months <- tibble(Month = seq(min(admin_mb_actual_spent_long$Month), 
+                                  today(), 
+                                  by = "month"))
+
+
+# Merge the full month sequence with the actual data and replace NAs with 0
+admin_mb_actual_spent_long <- full_months |> 
+  left_join(admin_mb_actual_spent_long, by = "Month") |> 
+  mutate(Actual_Spent = replace_na(Actual_Spent, 0))  # Fill missing values with 0
+
+
+# Create the plot with y-axis limits adjusted
+admin_mb_spending_plot <- ggplot(admin_mb_actual_spent_long, aes(x = Month, y = `Actual_Spent`, fill = `Cost Center`)) +
+  geom_col(position = "dodge", width = 20) +  # Dodge bars by Cost Center
   theme_minimal() +
-  scale_y_continuous(labels = scales::dollar) +  # Format y-axis to show dollar values
-  labs(
-    title = "Total Spending for Each Cost Center in July 2024",  # Update month/year
-    subtitle = "Service: SRV0737 Administration - HCD",
-    x = "Cost Center",
-    y = "July Actuals ($)",
-    caption = "Data Source: BBMR Data"  # Add data source
+  scale_y_continuous(
+    labels = scales::dollar,  # Format y-axis as dollars
+    limits = c(0, 250000)  # Set y-axis limits from 0 to 500,000
   ) + 
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +  # Show months clearly
+  coord_flip() +
+  labs(
+    title = "Total Spending for Each Cost Center Over Time",
+    subtitle = "Service: SRV0737 Administration - HCD",
+    x = "Month",
+    y = "Monthly Spend ($)",
+    caption = "Data Source: BBMR Data",
+    fill = "Cost Center"  # Rename the legend title
+  ) + 
+  scale_fill_paletteer_d("tvthemes::Alexandrite", na.translate = FALSE) +  # Corrected function for discrete fill
   theme(
-    axis.text.x = element_text(angle = 30, hjust = 1, size = 18),  # Rotate x-axis labels for readability
-    axis.text.y = element_text(size = 30),  # Adjust y-axis text size
-    axis.title.x = element_text(size = 26, face = "bold"),  # Emphasize x-axis title
-    axis.title.y = element_text(size = 26, face = "bold"),  # Emphasize y-axis title
-    plot.title = element_text(size = 30, face = "bold", hjust = 0.5),  # Center-align and enlarge title
-    plot.subtitle = element_text(size = 28, hjust = 0.5, face = "italic"),  # Style subtitle
-    plot.caption = element_text(size = 20, face = "italic"),  # Style caption
+    axis.text.x = element_text(angle = 30, hjust = 1, size = 26, face = "bold"),  # Rotate and bold x-axis labels for readability
+    axis.text.y = element_text(size = 26, face = "bold"),  # Bold y-axis text
+    axis.title.x = element_text(size = 28, face = "bold"),  
+    axis.title.y = element_text(size = 28, face = "bold"),  
+    plot.title = element_text(size = 30, face = "bold", hjust = 0.5),  
+    plot.subtitle = element_text(size = 24, hjust = 0.5, face = "italic"),  
+    plot.caption = element_text(size = 20, face = "italic"),  
     panel.grid.major = element_line(color = "gray90"),  # Lighter grid for subtle effect
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA),  # Set plot background to white
-    legend.title = element_text(size = 24, face = "bold"),  # Bigger legend title
-    legend.text = element_text(size = 22),  # Bigger legend text
-    legend.key.size = unit(1.5, "lines")  # Increase size of the legend key (the color box)
+    legend.title = element_text(size = 30, face = "bold"),  # Adjust legend title size
+    legend.text = element_text(size = 28),  # Adjust legend text size
+    legend.key.size = unit(3, "lines"), # Increase size of the legend key
+    legend.spacing.y = unit(5, "cm")  # Add vertical spacing between legend items
   )
 
 # Display the plot
-print(admin_nh_july_spending_plot)
+print(admin_mb_spending_plot)
 
 # saving the plot
-ggsave("plots/admin_nh_july_spending_deputy_marvin.pdf", 
+ggsave("admin_mb_monthly_spending_deputy_blye.pdf", 
        width = 45, height = 30)
 ```
