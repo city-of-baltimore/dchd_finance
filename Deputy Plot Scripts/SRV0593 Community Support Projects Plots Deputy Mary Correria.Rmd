@@ -144,7 +144,7 @@ csp_mc_tot_neg_ccenter <- ggplot(csp_mc_negative_spending, aes(x = reorder(`Cost
 print(csp_mc_tot_neg_ccenter)
 
 # saving the plot
-ggsave("csp_mc_tot_neg_ccenter_deputy_mary.pdf", width = 30, height = 20)
+ggsave("csp_mc_tot_neg_ccenter_deputy_Correria.pdf", width = 30, height = 20)
 ```
 
 ## Negative spending by Spend Category
@@ -181,7 +181,7 @@ csp_mc_tot_neg_spcat <- ggplot(csp_mc_negative_spending, aes(x = reorder(`Spend.
 print(csp_mc_tot_neg_spcat)
 
 # saving the plot
-ggsave("csp_mc_tot_neg_spcat_deputy_wendi.pdf", width = 30, height = 20)
+ggsave("csp_mc_tot_neg_spcat_deputy_Correria.pdf", width = 30, height = 20)
 ```
 
 ## Actual Spending by month
@@ -256,7 +256,7 @@ csp_mc_spending_plot <- ggplot(csp_mc_actual_spent_long, aes(x = Month, y = `Act
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA),  # Set plot background to white
     legend.title = element_text(size = 18, face = "bold"),  # Adjust legend title size
-    legend.text = element_text(size = 16),  # Adjust legend text size
+    legend.text = element_text(size = 18),  # Adjust legend text size
     legend.key.size = unit(1.5, "lines")  # Increase size of the legend key
   )
 
@@ -264,7 +264,7 @@ csp_mc_spending_plot <- ggplot(csp_mc_actual_spent_long, aes(x = Month, y = `Act
 print(csp_mc_spending_plot)
 
 # saving the plot
-ggsave("csp_mc_monthly_spending_deputy_wendi.pdf", width = 30, height = 20)
+ggsave("csp_mc_monthly_spending_deputy_Correria.pdf", width = 30, height = 20)
 ```
 
 
