@@ -190,7 +190,7 @@ ggsave("hce_jh_nh_tot_neg_spcat_deputy_jason.pdf",
 ## Actual Spending by month
 The plot below will show spending for service types and the actual spent for a specific month.
 
-```{r monthplot}
+```{r monthplot, message=FALSE, warning=FALSE}
 # filter the dataset for the actual spent
 hce_jh_actual_spent <- budg_vs_actuals |>
   filter(
