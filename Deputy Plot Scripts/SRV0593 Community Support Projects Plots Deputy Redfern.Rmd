@@ -133,9 +133,6 @@ csp_tot_neg_ccenter <- ggplot(csp_negative_spending, aes(x = reorder(`Cost Cente
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(csp_tot_neg_ccenter)
-
 # saving the plot
 ggsave("csp_tot_neg_ccenter_deputy_redfern.pdf", 
        width = 30, height = 20)
@@ -170,9 +167,6 @@ csp_tot_neg_spcat <- ggplot(csp_negative_spending, aes(x = reorder(`Spend Catego
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
-
-# display the plot
-print(csp_tot_neg_spcat)
 
 # saving the plot
 ggsave("csp_tot_neg_spcat_deputy_redfern.pdf", 
@@ -252,9 +246,6 @@ csp_spending_plot <- ggplot(csp_actual_spent_long, aes(x = Month, y = `Actual_Sp
     legend.text = element_text(size = 16),  # Adjust legend text size
     legend.key.size = unit(1.5, "lines")  # Increase size of the legend key
   )
-
-# Display the plot
-print(csp_spending_plot)
 
 # saving the plot
 ggsave("csp_monthly_spending_deputy_redfern.pdf", width = 30, height = 20)
