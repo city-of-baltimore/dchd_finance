@@ -250,8 +250,8 @@ ws_nh_actual_spent_plot <- ggplot(ws_nh_actual_spent_long, aes(x = Month, y = `A
     panel.grid.major = element_line(color = "gray90"),  # Lighter grid for subtle effect
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA),  # Set plot background to white
-    legend.title = element_text(size = 26, face = "bold"),  # Adjust legend title size
-    legend.text = element_text(size = 22),  # Adjust legend text size
+    legend.title = element_text(size = 28, face = "bold"),  # Adjust legend title size
+    legend.text = element_text(size = 24),  # Adjust legend text size
     legend.key.size = unit(5, "lines"), # Increase size of the legend key
     legend.spacing.y = unit(5, "cm")  # Add vertical spacing between legend items
   )
