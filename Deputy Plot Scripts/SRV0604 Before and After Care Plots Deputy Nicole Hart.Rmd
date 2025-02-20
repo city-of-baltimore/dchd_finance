@@ -133,9 +133,6 @@ bac_nh_tot_neg_ccenter <- ggplot(bac_nh_negative_spending, aes(x = reorder(`Cost
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(bac_nh_tot_neg_ccenter)
-
 # saving the plot
 ggsave("bac_nh_tot_neg_ccenter_deputy_Hart.pdf", width = 30, height = 20) # this will save to your local drive
 ```
@@ -170,8 +167,6 @@ bac_nh_tot_neg_spcat <- ggplot(bac_nh_negative_spending, aes(x = reorder(`Spend 
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(bac_nh_tot_neg_spcat)
 
 # saving the plot
 ggsave("bac_nh_tot_neg_spcat_deputy_Hart.pdf", width = 30, height = 20)
@@ -223,7 +218,7 @@ bac_nh_spending_plot <- ggplot(bac_nh_actual_spent_long, aes(x = Month, y = `Act
   theme_minimal() +
   scale_y_continuous(
     labels = scales::dollar,  # Format y-axis as dollars
-    limits = c(0, 150000)  # Set y-axis limits from 0 to 500,000
+    limits = c(0, 75000)  # Set y-axis limits from 0 to 500,000
   ) + 
   scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +  # Show months clearly
   coord_flip() +
@@ -247,13 +242,10 @@ bac_nh_spending_plot <- ggplot(bac_nh_actual_spent_long, aes(x = Month, y = `Act
     panel.grid.major = element_line(color = "gray90"),  # Lighter grid for subtle effect
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA),  # Set plot background to white
-    legend.title = element_text(size = 18, face = "bold"),  # Adjust legend title size
-    legend.text = element_text(size = 16),  # Adjust legend text size
+    legend.title = element_text(size = 30, face = "bold"),  # Adjust legend title size
+    legend.text = element_text(size = 28),  # Adjust legend text size
     legend.key.size = unit(1.5, "lines")  # Increase size of the legend key
   )
-
-# Display the plot
-print(bac_nh_spending_plot)
 
 # saving the plot
 ggsave("bac_nh_monthly_deputy_Hart.pdf", width = 30, height = 20)
