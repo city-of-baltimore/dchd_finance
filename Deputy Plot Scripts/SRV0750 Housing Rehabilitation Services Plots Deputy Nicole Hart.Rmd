@@ -136,9 +136,6 @@ hrs_nh_tot_neg_ccenter <- ggplot(hrs_nh_negative_spending, aes(x = reorder(`Cost
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(hrs_nh_tot_neg_ccenter)
-
 # saving the plot
 ggsave("hrs_nh_tot_neg_ccenter_deputy_Hart.pdf",
        width = 30, height = 20)
@@ -173,9 +170,6 @@ hrs_nh_tot_neg_spcat <- ggplot(hrs_nh_negative_spending, aes(x = reorder(`Spend 
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
-
-# display the plot
-print(hrs_nh_tot_neg_spcat)
 
 # saving the plot
 ggsave("hrs_nh_tot_neg_spcat_deputy_Hart.pdf", 
@@ -253,13 +247,11 @@ hrs_nh_actual_spent_plot <- ggplot(hrs_nh_actual_spent_long, aes(x = Month, y = 
     panel.grid.major = element_line(color = "gray90"),  # Lighter grid for subtle effect
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA),  # Set plot background to white
-    legend.title = element_text(size = 26, face = "bold"),  # Adjust legend title size
-    legend.text = element_text(size = 24),  # Adjust legend text size
+    legend.title = element_text(size = 30, face = "bold"),  # Adjust legend title size
+    legend.text = element_text(size = 28),  # Adjust legend text size
     legend.key.size = unit(3, "lines")  # Increase size of the legend key
   )
 
-# Display the plot
-print(hrs_nh_actual_spent_plot)
 
 # saving the plot
 ggsave("hrs_nh_monthly_spending_deputy_Hart.pdf",
