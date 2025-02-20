@@ -231,7 +231,7 @@ csp_mc_spending_plot <- ggplot(csp_mc_actual_spent_long, aes(x = Month, y = `Act
   theme_minimal() +
   scale_y_continuous(
     labels = scales::dollar,  # Format y-axis as dollars
-    limits = c(0, 300000)  # Set y-axis limits from 0 to 500,000
+    limits = c(0, 250000)  # Set y-axis limits from 0 to 500,000
   ) + 
   scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +  # Show months clearly
   coord_flip() +
