@@ -137,8 +137,6 @@ ah_tot_neg_ccenter <- ggplot(ah_negative_spending, aes(x = reorder(`Cost Center`
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(ah_tot_neg_ccenter)
 
 # saving the plot
 ggsave("ah_tot_neg_ccenter_deputy_Redfern.pdf", 
@@ -174,9 +172,6 @@ ah_tot_neg_spcat <- ggplot(ah_negative_spending, aes(x = reorder(`Spend Category
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
-
-# display the plot
-print(ah_tot_neg_spcat)
 
 # saving the plot
 ggsave("ah_tot_neg_spcat_deputy_Redfern.pdf", 
