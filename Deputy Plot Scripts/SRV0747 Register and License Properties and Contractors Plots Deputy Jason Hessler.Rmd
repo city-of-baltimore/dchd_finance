@@ -98,7 +98,7 @@ Making some plots that show different perspectives with the `budg_vs_actuals` df
 The plot below will show negative spending for service types & Cost Center vs. total spent.
 *Note: If the plot has no values then there was no negative spending to be found for any of the cost centers*
 
-```{r totspentnegplot}
+```{r totspentnegplot, message=FALSE, warning=FALSE}
 # filter the dataset for negative spending values
 rlpc_jh_nh_negative_spending <- budg_vs_actuals |>
   filter(
@@ -109,16 +109,16 @@ rlpc_jh_nh_negative_spending <- budg_vs_actuals |>
   )
 
 # plotting data below for different perspectives
-rlpc_jh_nh_tot_neg_ccenter <- ggplot(rlpc_jh_nh_negative_spending, aes(x = reorder(`Cost Center`, `Total Spent`), y = `Total Spent`)) +
+rlpc_jh_nh_tot_neg_ccenter <- ggplot(rlpc_jh_nh_negative_spending, aes(x = reorder(`Cost Center`, `Total Spent`), y = `Total Spent`, fill = `Cost Center`)) +
   geom_col(fill = "red", width = 0.5) +  # Adjust bar width for better aesthetics
   theme_minimal() +  # Minimalistic theme
   scale_y_reverse(labels = scales::dollar) +  # Reverse y-axis and format with dollar labels
-  labs(
+    labs(
     title = "Total Negative Spending by Cost Center",
     subtitle = "Service: SRV0747 Register and License Properties and Contractors",
     x = "Cost Center",
     y = "Total Spent (USD)",
-    caption = "Data Source: BBMR Data"  # Add data source
+    caption = "Data Source: BBMR Data"
   ) +
   theme(
     axis.text.x = element_text(angle = 30, hjust = 1, size = 22),  # Rotate x-axis labels for readability
@@ -133,8 +133,6 @@ rlpc_jh_nh_tot_neg_ccenter <- ggplot(rlpc_jh_nh_negative_spending, aes(x = reord
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(rlpc_jh_nh_tot_neg_ccenter)
 
 # saving the plot
 ggsave("rlpc_jh_nh_tot_neg_ccenter_deputy_jason.pdf",
@@ -145,7 +143,7 @@ ggsave("rlpc_jh_nh_tot_neg_ccenter_deputy_jason.pdf",
 This plot below will show the spending drilled down further by the Spend Category to highlight the areas where there is a negative cost.
 *Note: If the plot has no values then there was no negative spending to be found for any of the cost centers*
 
-```{r spendcat}
+```{r spendcat, message=FALSE, warning=FALSE}
 # plotting data below for different perspectives
 rlpc_jh_nh_tot_neg_spcat <- ggplot(rlpc_jh_nh_negative_spending, aes(x = reorder(`Spend Category`, `Total Spent`), y = `Total Spent`)) +
   geom_col(fill = "red", width = 0.5) +  # Adjust bar width for better aesthetics
@@ -170,9 +168,6 @@ rlpc_jh_nh_tot_neg_spcat <- ggplot(rlpc_jh_nh_negative_spending, aes(x = reorder
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
-
-# display the plot
-print(rlpc_jh_nh_tot_neg_spcat)
 
 # saving the plot
 ggsave("rlpc_jh_nh_tot_neg_spcat_deputy_jason.pdf", 
@@ -225,7 +220,7 @@ rlpc_jh_nh_actual_spent_plot <- ggplot(rlpc_jh_nh_actual_spent_long, aes(x = Mon
   theme_minimal() +
   scale_y_continuous(
     labels = scales::dollar,  # Format y-axis as dollars
-    limits = c(0, 300000)  # Set y-axis limits from 0 to 500,000
+    limits = c(0, 100000)  # Set y-axis limits from 0 to 500,000
   ) + 
   scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +  # Show months clearly
   coord_flip() +
@@ -254,9 +249,6 @@ rlpc_jh_nh_actual_spent_plot <- ggplot(rlpc_jh_nh_actual_spent_long, aes(x = Mon
     legend.key.size = unit(3, "lines"),  # Increase size of the legend key
     legend.spacing.y = unit(5, "cm")  # Add vertical spacing between legend items
   )
-
-# Display the plot
-print(rlpc_jh_nh_actual_spent_plot)
 
 # saving the plot
 ggsave("rlpc_jh_monthly_spending_deputy_jason.pdf",
