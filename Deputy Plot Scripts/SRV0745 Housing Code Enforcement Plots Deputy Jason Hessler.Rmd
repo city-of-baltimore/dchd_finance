@@ -23,6 +23,9 @@ library(DT)
 library(openxlsx)
 library(stringr)
 library(lubridate)
+library(tvthemes)
+library(PrettyCols)
+library(paletteer)
 ```
 
 ## Reading in the data 
@@ -187,6 +190,7 @@ ggsave("hce_jh_nh_tot_neg_spcat_deputy_jason.pdf",
        width = 30, height = 20)
 ```
 
+
 ## Actual Spending by month
 The plot below will show spending for service types and the actual spent for a specific month.
 
@@ -195,7 +199,12 @@ The plot below will show spending for service types and the actual spent for a s
 hce_jh_actual_spent <- budg_vs_actuals |>
   filter(
     Service == "SRV0745 Housing Code Enforcement" &
-    `Cost Center` %in% c("CCA000326 Housing Code Property Maintenance Code Enforcement")
+    `Cost Center` %in% c("CCA000322 Housing Code Enforcement Administration",
+                         "CCA000323 Housing Code Enforcement Legal",
+                         "CCA000324 Housing Code Whole Block Demolition",
+                         "CCA000325 Housing Code Notice Production Constituent Services",
+                         "CCA000327 Housing Code Special Investigations",
+                         "CCA000329 Housing Code Demolition Contracts")
   )
 
 # calculate the maximum spending for each cost center
@@ -244,7 +253,7 @@ hce_jh_actual_spent_plot <- ggplot(hce_jh_actual_spent_long, aes(x = Month, y = 
     caption = "Data Source: BBMR Data",
     fill = "Cost Center"  # Rename the legend title
   ) + 
-  scale_fill_discrete(na.translate = FALSE) +  # Exclude NA from the legend, but include in plot
+scale_fill_paletteer_d("LaCroixColoR::Apricot", na.translate = FALSE) +
   theme(
     axis.text.x = element_text(angle = 30, hjust = 1, size = 24, face = "bold"),  # Rotate and bold x-axis labels for readability
     axis.text.y = element_text(size = 24, face = "bold"),  # Bold y-axis text
@@ -256,8 +265,8 @@ hce_jh_actual_spent_plot <- ggplot(hce_jh_actual_spent_long, aes(x = Month, y = 
     panel.grid.major = element_line(color = "gray90"),  # Lighter grid for subtle effect
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA),  # Set plot background to white
-    legend.title = element_text(size = 26, face = "bold"),  # Adjust legend title size
-    legend.text = element_text(size = 24),  # Adjust legend text size
+    legend.title = element_text(size = 28, face = "bold"),  # Adjust legend title size
+    legend.text = element_text(size = 26),  # Adjust legend text size
     legend.key.size = unit(3, "lines"),  # Increase size of the legend key
     legend.spacing.y = unit(5, "cm")  # Add vertical spacing between legend items
   )

@@ -260,7 +260,7 @@ admin_mb_spending_plot <- ggplot(admin_mb_actual_spent_long, aes(x = Month, y = 
     caption = "Data Source: BBMR Data",
     fill = "Cost Center"  # Rename the legend title
   ) + 
-  scale_fill_paletteer_d("tvthemes::Alexandrite", na.translate = FALSE) +  # Corrected function for discrete fill
+  scale_fill_paletteer_d("ggsci::default_igv", na.translate = FALSE) +
   theme(
     axis.text.x = element_text(angle = 30, hjust = 1, size = 26, face = "bold"),  # Rotate and bold x-axis labels for readability
     axis.text.y = element_text(size = 26, face = "bold"),  # Bold y-axis text
