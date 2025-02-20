@@ -137,9 +137,6 @@ ph_nh_tot_neg_ccenter <- ggplot(ph_nh_negative_spending, aes(x = reorder(`Cost C
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(ph_nh_tot_neg_ccenter)
-
 # saving the plot
 ggsave("ph_nh_tot_neg_ccenter_deputy_Hart.pdf", 
        width = 30, height = 20)
@@ -175,8 +172,6 @@ ph_nh_tot_neg_spcat <- ggplot(ph_nh_negative_spending, aes(x = reorder(`Spend Ca
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(ph_nh_tot_neg_spcat)
 
 # saving the plot
 ggsave("ph_nh_tot_neg_spcat_deputy_Hart.pdf", 
@@ -259,9 +254,6 @@ ph_nh_actual_spent_plot <- ggplot(ph_nh_actual_spent_long, aes(x = Month, y = `A
     legend.text = element_text(size = 18),  # Adjust legend text size
     legend.key.size = unit(3, "lines")  # Increase size of the legend key
   )
-
-# Display the plot
-print(ph_nh_actual_spent_plot)
 
 # saving the plot
 ggsave("ph_nh_monthly_spending_deputy_Hart.pdf", 
