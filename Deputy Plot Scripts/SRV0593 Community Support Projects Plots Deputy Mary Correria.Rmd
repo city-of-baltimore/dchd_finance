@@ -101,7 +101,7 @@ Making some plots that show different perspectives with the `budg_vs_actuals` df
 The plot below will show negative spending for service types & Cost Center vs. total spent.
 *Note: If the plot has no values then there was no negative spending to be found for any of the cost centers*
 
-```{r totspentnegplot}
+```{r totspentnegplot, warning=FALSE, message=FALSE}
 # Rename the duplicate columns to make them unique
 colnames(budg_vs_actuals) <- make.names(colnames(budg_vs_actuals), unique = TRUE)
 
@@ -140,9 +140,6 @@ csp_mc_tot_neg_ccenter <- ggplot(csp_mc_negative_spending, aes(x = reorder(`Cost
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(csp_mc_tot_neg_ccenter)
-
 # saving the plot
 ggsave("csp_mc_tot_neg_ccenter_deputy_Correria.pdf", width = 30, height = 20)
 ```
@@ -151,7 +148,7 @@ ggsave("csp_mc_tot_neg_ccenter_deputy_Correria.pdf", width = 30, height = 20)
 This plot below will show the spending drilled down further by the Spend Category to highlight the areas where there is a negative cost.
 *Note: If the plot has no values then there was no negative spending to be found for any of the cost centers*
 
-```{r spendcat}
+```{r spendcat, warning=FALSE, message=FALSE}
 # plotting data below for different perspectives
 csp_mc_tot_neg_spcat <- ggplot(csp_mc_negative_spending, aes(x = reorder(`Spend.Category`, `Total.Spent`), y = `Total.Spent`)) +
   geom_col(fill = "red", width = 0.5) +  # Adjust bar width for better aesthetics
@@ -176,9 +173,6 @@ csp_mc_tot_neg_spcat <- ggplot(csp_mc_negative_spending, aes(x = reorder(`Spend.
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
-
-# display the plot
-print(csp_mc_tot_neg_spcat)
 
 # saving the plot
 ggsave("csp_mc_tot_neg_spcat_deputy_Correria.pdf", width = 30, height = 20)
@@ -259,9 +253,6 @@ csp_mc_spending_plot <- ggplot(csp_mc_actual_spent_long, aes(x = Month, y = `Act
     legend.text = element_text(size = 18),  # Adjust legend text size
     legend.key.size = unit(1.5, "lines")  # Increase size of the legend key
   )
-
-# Display the plot
-print(csp_mc_spending_plot)
 
 # saving the plot
 ggsave("csp_mc_monthly_spending_deputy_Correria.pdf", width = 30, height = 20)
