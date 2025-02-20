@@ -244,7 +244,7 @@ admin_mb_actual_spent_long <- full_months |>
 
 # Create the plot with y-axis limits adjusted
 admin_mb_spending_plot <- ggplot(admin_mb_actual_spent_long, aes(x = Month, y = `Actual_Spent`, fill = `Cost Center`)) +
-  geom_col(position = "dodge", width = 20) +  # Dodge bars by Cost Center
+  geom_col(position = "dodge", width = 30) +  # Dodge bars by Cost Center
   theme_minimal() +
   scale_y_continuous(
     labels = scales::dollar,  # Format y-axis as dollars
