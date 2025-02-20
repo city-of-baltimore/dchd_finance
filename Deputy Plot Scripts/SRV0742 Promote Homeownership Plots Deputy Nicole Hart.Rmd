@@ -231,7 +231,7 @@ ph_nh_actual_spent_plot <- ggplot(ph_nh_actual_spent_long, aes(x = Month, y = `A
   theme_minimal() +
   scale_y_continuous(
     labels = scales::dollar,  # Format y-axis as dollars
-    limits = c(0, 300000)  # Set y-axis limits from 0 to 500,000
+    limits = c(0, 200000)  # Set y-axis limits from 0 to 500,000
   ) + 
   scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +  # Show months clearly
   coord_flip() +
@@ -255,8 +255,8 @@ ph_nh_actual_spent_plot <- ggplot(ph_nh_actual_spent_long, aes(x = Month, y = `A
     panel.grid.major = element_line(color = "gray90"),  # Lighter grid for subtle effect
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA),  # Set plot background to white
-    legend.title = element_text(size = 18, face = "bold"),  # Adjust legend title size
-    legend.text = element_text(size = 16),  # Adjust legend text size
+    legend.title = element_text(size = 20, face = "bold"),  # Adjust legend title size
+    legend.text = element_text(size = 18),  # Adjust legend text size
     legend.key.size = unit(3, "lines")  # Increase size of the legend key
   )
 
