@@ -23,6 +23,9 @@ library(DT)
 library(openxlsx)
 library(stringr)
 library(lubridate)
+library(tvthemes)
+library(PrettyCols)
+library(paletteer)
 ```
 
 ## Reading in the data 
@@ -90,10 +93,10 @@ Making some plots that show different perspectives with the `budg_vs_actuals` df
 *Service* 
   1.`SRV0751 Building Code Permitting, Inspections and Compliance`
 *Cost Center* 
-  1.`CCA000341 Construction Code Enforcement (HCD)`
-  2.`CCA000342 Building and Zoning Demolition Inspection (HCD)`
-  3.`CCA000343 Building and Zoning Permit Processing (HCD)`
-  4.`CCA000344 Building and Zoning Plans Examining (HCD)`
+  1.`CCA000341 Building Code Inspections`
+  2.`CCA000342 Building Demolition Inspections`
+  3.`CCA000343 Permit Processing`
+  4.`CCA000344 Plans Examining`
   5.`CCA000345 Building and Zoning Plans Enforcement (HCD)`
 *Total Spending by Month* 
 
@@ -106,10 +109,10 @@ The plot below will show negative spending for service types & Cost Center vs. t
 bzip_jh_negative_spending <- budg_vs_actuals |>
   filter(
     Service == "SRV0751 Building Code Permitting, Inspections and Compliance" &
-    `Cost Center` %in% c("CCA000341 Construction Code Enforcement (HCD)",
-                         "CCA000342 Building and Zoning Demolition Inspection (HCD)",
-                         "CCA000343 Building and Zoning Permit Processing (HCD)",
-                         "CCA000344 Building and Zoning Plans Examining (HCD)",
+    `Cost Center` %in% c("CCA000341 Building Code Inspections",
+                         "CCA000342 Building Demolition Inspections",
+                         "CCA000343 Permit Processing",
+                         "CCA000344 Plans Examining",
                          "CCA000345 Building and Zoning Plans Enforcement (HCD)") &
     `Total Spent` < 0
   )
@@ -138,9 +141,6 @@ bzip_jh_tot_neg_ccenter <- ggplot(bzip_jh_negative_spending, aes(x = reorder(`Co
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
-
-# display the plot
-print(bzip_jh_tot_neg_ccenter)
 
 # saving the plot
 ggsave("bzip_jh_tot_neg_ccenter_deputy_Hessler.pdf",
@@ -177,8 +177,6 @@ bzip_jh_tot_neg_spcat <- ggplot(bzip_jh_negative_spending, aes(x = reorder(`Spen
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(bzip_jh_tot_neg_spcat)
 
 # saving the plot
 ggsave("bzip_jh_tot_neg_spcat_deputy_Hessler.pdf",
@@ -193,10 +191,10 @@ The plot below will show spending for service types and the actual spent for a s
 bzip_jh_actual_spent <- budg_vs_actuals |>
   filter(
     Service == "SRV0751 Building Code Permitting, Inspections and Compliance" &
-    `Cost Center` %in% c("CCA000341 Construction Code Enforcement (HCD)",
-                         "CCA000342 Building and Zoning Demolition Inspection (HCD)",
-                         "CCA000343 Building and Zoning Permit Processing (HCD)",
-                         "CCA000344 Building and Zoning Plans Examining (HCD)",
+    `Cost Center` %in% c("CCA000341 Building Code Inspections",
+                         "CCA000342 Building Demolition Inspections",
+                         "CCA000343 Permit Processing",
+                         "CCA000344 Plans Examining",
                          "CCA000345 Building and Zoning Plans Enforcement (HCD)")
   )
 
@@ -246,7 +244,7 @@ bzip_jh_actual_spent_plot <- ggplot(bzip_jh_actual_spent_long, aes(x = Month, y 
     caption = "Data Source: BBMR Data",
     fill = "Cost Center"  # Rename the legend title
   ) + 
-  scale_fill_discrete(na.translate = FALSE) +  # Exclude NA from the legend, but include in plot
+  scale_fill_paletteer_d("ggsci::default_igv", na.translate = FALSE) +
   theme(
     axis.text.x = element_text(angle = 30, hjust = 1, size = 24, face = "bold"),  # Rotate and bold x-axis labels for readability
     axis.text.y = element_text(size = 24, face = "bold"),  # Bold y-axis text
@@ -258,13 +256,10 @@ bzip_jh_actual_spent_plot <- ggplot(bzip_jh_actual_spent_long, aes(x = Month, y 
     panel.grid.major = element_line(color = "gray90"),  # Lighter grid for subtle effect
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA),  # Set plot background to white
-    legend.title = element_text(size = 26, face = "bold"),  # Adjust legend title size
-    legend.text = element_text(size = 24),  # Adjust legend text size
+    legend.title = element_text(size = 30, face = "bold"),  # Adjust legend title size
+    legend.text = element_text(size = 28),  # Adjust legend text size
     legend.key.size = unit(3, "lines")  # Increase size of the legend key
   )
-
-# Display the plot
-print(bzip_jh_actual_spent_plot)
 
 # saving the plot
 ggsave("bzip_jh_monthly_spending_deputy_Hessler.pdf",
