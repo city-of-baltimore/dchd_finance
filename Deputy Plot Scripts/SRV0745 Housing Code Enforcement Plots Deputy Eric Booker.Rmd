@@ -131,9 +131,6 @@ hce_eb_tot_neg_ccenter <- ggplot(hce_eb_negative_spending, aes(x = reorder(`Cost
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(hce_eb_tot_neg_ccenter)
-
 # saving the plot
 ggsave("hce_eb_tot_neg_ccenter_deputy_Booker.pdf", 
        width = 30, height = 20)
@@ -168,9 +165,6 @@ hce_eb_tot_neg_spcat <- ggplot(hce_eb_negative_spending, aes(x = reorder(`Spend 
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
-
-# display the plot
-print(hce_eb_tot_neg_spcat)
 
 # saving the plot
 ggsave("hce_eb_tot_neg_spcat_deputy_Booker.pdf",
@@ -252,9 +246,6 @@ hce_eb_actual_spent_plot <- ggplot(hce_eb_actual_spent_long, aes(x = Month, y = 
     legend.spacing.y = unit(5, "cm")  # Add vertical spacing between legend items
 
   )
-
-# Display the plot
-print(hce_eb_actual_spent_plot)
 
 # saving the plot
 ggsave("hce_eb_monthly_spending_deputy_Booker.pdf", 
