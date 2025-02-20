@@ -130,9 +130,6 @@ sfsp_nh_tot_neg_ccenter <- ggplot(sfsp_nh_negative_spending, aes(x = reorder(`Co
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(sfsp_nh_tot_neg_ccenter)
-
 # saving the plot
 ggsave("sfsp_nh_tot_neg_ccenter_deputy_nicole.pdf", 
        width = 30, height = 20)
@@ -168,8 +165,6 @@ sfsp_nh_tot_neg_spcat <- ggplot(sfsp_nh_negative_spending, aes(x = reorder(`Spen
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(sfsp_nh_tot_neg_spcat)
 
 # saving the plot
 ggsave("sfsp_nh_tot_neg_spcat_deputy_nicole.pdf", 
@@ -249,9 +244,6 @@ sfsp_nh_actual_spent_plot <- ggplot(sfsp_nh_actual_spent_long, aes(x = Month, y 
     legend.text = element_text(size = 24),  # Adjust legend text size
     legend.key.size = unit(3, "lines")  # Increase size of the legend key
   )
-
-# Display the plot
-print(sfsp_nh_actual_spent_plot)
 
 # saving the plot
 ggsave("sfsp_nh_monthly_spending_deputy_Hart.pdf", 
