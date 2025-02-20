@@ -556,7 +556,7 @@ The plot below will compare the General Grants Fund and the GLYTD EXP 5000 State
 
 ```{r tpe_plot, message=FALSE, warning=FALSE}
 # Step 1: construct Comparison Data Frame Correctly
-tpe_glytd_comparison_data <- data.frame(
+all_tpe_glytd_comparison_data <- data.frame(
   Category = rep(c("Salaries/OPC Projections", "Other EXP Projections", "Total Projections"), each = 2),  
   Fund = c("1001 General Grants Fund", "GL YTD EXP 1001 General Grants Fund",
            "5000 State Grants Fund", "GL YTD EXP 5000 State Grants Fund",
@@ -575,7 +575,7 @@ total_projections_tpe <- sum(as.numeric(tpe_rb_final_tbl$Total.Projections), na.
 
 
 # Step 3: create the stacked horizontal bar chart with two threshold lines
-ggplot(tpe_glytd_comparison_data, aes(x = Category, y = Value, fill = Category)) +
+ggplot(all_tpe_glytd_comparison_data, aes(x = Category, y = Value, fill = Category)) +
   geom_bar(stat = "identity", position = "stack") +
   scale_fill_manual(values = c("Salaries/OPC Projections" = "steelblue", 
                                "Other EXP Projections" = "darkgreen",
@@ -660,26 +660,27 @@ The plot below will compare the Analysis table General Fund data together. The `
 
 
 ```{r anlys_gf_plot, message=FALSE, warning=FALSE}
-# Step 1: create the comparison data for plotting
+# Step 1: Create the comparison data for plotting
 ays_gf_comparison_data <- data.frame(
-  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections", "Total Projections"), each = nrow(alys_gf_final_tbl)),  
+  Category = rep(c("Salaries/OPC Projections", "Other EXP Projections", "Total Projections"), 
+                 each = nrow(alys_gf_final_tbl)),  
   Fund = rep("1001 General Grants Fund", times = 3 * nrow(alys_gf_final_tbl)),  
   Value = c(
     alys_gf_final_tbl$`Salaries/OPC Projections`,
     alys_gf_final_tbl$`Other EXP Projections`,
     alys_gf_final_tbl$`Total Projections`
-  )
+  ),
+  stringsAsFactors = FALSE  # Prevents automatic factor conversion
 )
 
-
-# Step 2: create the non-stacked horizontal bar chart with custom colors and bold axis titles
+# Step 2: Create the non-stacked horizontal bar chart with custom colors and bold axis titles
 ggplot(ays_gf_comparison_data, aes(x = Category, y = Value, fill = Category)) +
   geom_bar(stat = "identity", position = "dodge") +  # Non-stacked bars (side-by-side)
   scale_fill_manual(values = c("Salaries/OPC Projections" = "steelblue", 
                                "Other EXP Projections" = "darkgreen",
-                               "Total Projections" = "gray")) +  # Custom colors)) +  # Custom colors
+                               "Total Projections" = "gray")) +  # Custom colors
   scale_y_continuous(labels = label_dollar()) +  # Format y-axis values with dollar signs and commas
-  coord_flip()+
+  coord_flip() +
   labs(title = "Analysis Table 1001 General Grant Funds Comparisons",
        subtitle = "All Cost Centers Under the 1001 General Funds",
        x = "Category",
@@ -695,6 +696,7 @@ ggplot(ays_gf_comparison_data, aes(x = Category, y = Value, fill = Category)) +
     axis.text.x = element_text(size = 18, angle = 45, hjust = 1),  # Rotate x-axis labels
     axis.text.y = element_text(size = 18)
   )
+
 
 # save the plot
 ggsave("all_analysis_gf_comparison_data.png",width = 18, height = 16, dpi = 300)  
@@ -755,17 +757,14 @@ The plot below will compare the Analysis table General Fund data together. The `
 
 
 ```{r anlys_tpe_plot, warning=FALSE}
-aystpe_comparison_data <- data.frame(
+aaystpe_comparison_data <- data.frame(
   Category = rep(c("Salaries/OPC Projections", "Other EXP Projections", "Total Projections"), 
                  each = nrow(alys_gf_final_tbl) + nrow(alys_sf_final_tbl)),  
-  Fund = c(
-    rep("1001 General Grants Fund", nrow(alys_gf_final_tbl)), 
-    rep("GL YTD EXP 1001 General Grants Fund", nrow(alys_sf_final_tbl)), 
-    rep("1001 General Grants Fund", nrow(alys_gf_final_tbl)), 
-    rep("GL YTD EXP 5000 State Grants Fund", nrow(alys_sf_final_tbl)),
-    rep("1001 General Grants Fund", nrow(alys_gf_final_tbl)), 
-    rep("GL YTD EXP 5000 State Grants Fund", nrow(alys_sf_final_tbl))
-  ),  
+  Fund = rep(c(
+    "1001 General Grants Fund", "GL YTD EXP 1001 General Grants Fund",
+    "1001 General Grants Fund", "GL YTD EXP 5000 State Grants Fund",
+    "Total Projections 1001 General Grants Fund", "Total Projections GL YTD EXP 5000 State Grants Fund"
+  ), times = nrow(alys_gf_final_tbl) + nrow(alys_sf_final_tbl)),  # Ensure length matches
   Value = c(
     alys_gf_final_tbl$`Salaries/OPC Projections`, 
     alys_sf_final_tbl$`Salaries/OPC Projections`, 
@@ -773,8 +772,10 @@ aystpe_comparison_data <- data.frame(
     alys_sf_final_tbl$`Other EXP Projections`,
     alys_gf_final_tbl$`Total Projections`,
     alys_sf_final_tbl$`Total Projections`
-  )  
+  ),
+  stringsAsFactors = FALSE  # Prevent factor conversion issues
 )
+
 # Step 2: Create the non-stacked horizontal bar chart with custom colors and bold axis titles
 ggplot(aystpe_comparison_data, aes(x = Category, y = Value, fill = Category)) +
   geom_bar(stat = "identity", position = "dodge") +  # Non-stacked bars (side-by-side)
@@ -782,7 +783,7 @@ ggplot(aystpe_comparison_data, aes(x = Category, y = Value, fill = Category)) +
                                "Other EXP Projections" = "darkgreen",
                                "Total Projections" = "gray")) +  # Custom colors
   scale_y_continuous(labels = label_dollar()) +  # Format y-axis values with dollar signs and commas
-  coord_flip()+
+  coord_flip() +
   labs(title = "Analysis Table Total Projections Equals to Row 268 Comparisons",
        subtitle = "All Cost Centers Under the 1001 General Funds and 5000 State Grant Funds",
        x = "Category",

@@ -8,6 +8,10 @@ output: html_document
 # Project Overview
 This markdown file will use the DHCD Finance dept data to calculate the columns that are provided from the `754 SFSP Expense Report`. There will be a series of plots to make the tables at the bottom of the report more appealing for what is being shown. This will be done through visuals.
 
+*Note: This rmd file contains only the summer food program.*
+
+*Using `Control + Alt + R` will run the whole script in under 10 seconds. Pressing the `Run` button and selecting `Run All` will do the same* 
+
 ```{r libraries, warning=FALSE, message=TRUE}
 # libraries for data analysis
 library(dplyr)
