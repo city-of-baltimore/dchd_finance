@@ -139,9 +139,6 @@ pda_tot_neg_ccenter <- ggplot(pda_negative_spending, aes(x = reorder(`Cost Cente
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(pda_tot_neg_ccenter)
-
 # saving the plot
 ggsave("pda_tot_neg_ccenter_deputy_Redfern.pdf",
        width = 30, height = 20)
@@ -176,9 +173,6 @@ pda_tot_neg_spcat <- ggplot(pda_negative_spending, aes(x = reorder(`Spend Catego
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
-
-# display the plot
-print(pda_tot_neg_spcat)
 
 # saving the plot
 ggsave("pda_tot_neg_spcat_deputy_Redfern.pdf", 
@@ -258,13 +252,10 @@ pda_actual_spent_plot <- ggplot(pda_actual_spent_long, aes(x = Month, y = `Actua
     panel.grid.major = element_line(color = "gray90"),  # Lighter grid for subtle effect
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA),  # Set plot background to white
-    legend.title = element_text(size = 26, face = "bold"),  # Adjust legend title size
-    legend.text = element_text(size = 24),  # Adjust legend text size
+    legend.title = element_text(size = 30, face = "bold"),  # Adjust legend title size
+    legend.text = element_text(size = 28),  # Adjust legend text size
     legend.key.size = unit(3, "lines")  # Increase size of the legend key
   )
-
-# Display the plot
-print(pda_actual_spent_plot)
 
 # saving the plot
 ggsave("pda_monthly_spending_deputy_Redfern.pdf",
