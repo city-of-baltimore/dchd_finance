@@ -149,9 +149,6 @@ admin_mb_tot_neg_ccenter <- ggplot(admin_mb_negative_spending, aes(x = reorder(`
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(admin_mb_tot_neg_ccenter)
-
 # saving the plot
 ggsave("admin_mb_tot_neg_ccenter_deputy_marvin.pdf", 
        width = 30, height = 20)
@@ -186,9 +183,6 @@ admin_mb_tot_neg_spcat <- ggplot(admin_mb_negative_spending, aes(x = reorder(`Sp
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
-
-# display the plot
-print(admin_mb_tot_neg_spcat)
 
 # saving the plot
 ggsave("admin_mb_tot_neg_spcat_deputy_marvin.pdf", 
@@ -277,9 +271,6 @@ admin_mb_spending_plot <- ggplot(admin_mb_actual_spent_long, aes(x = Month, y = 
     legend.key.size = unit(3, "lines"), # Increase size of the legend key
     legend.spacing.y = unit(5, "cm")  # Add vertical spacing between legend items
   )
-
-# Display the plot
-print(admin_mb_spending_plot)
 
 # saving the plot
 ggsave("admin_mb_monthly_spending_deputy_blye.pdf", 
