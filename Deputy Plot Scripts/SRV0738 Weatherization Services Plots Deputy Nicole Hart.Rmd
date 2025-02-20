@@ -135,9 +135,6 @@ ws_nh_tot_neg_ccenter <- ggplot(ws_nh_negative_spending, aes(x = reorder(`Cost C
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
 
-# display the plot
-print(ws_nh_tot_neg_ccenter)
-
 # saving the plot
 ggsave("ws_nh_tot_neg_ccenter_deputy_Hart.pdf", 
        width = 30, height = 20)
@@ -172,9 +169,6 @@ ws_nh_tot_neg_spcat <- ggplot(ws_nh_negative_spending, aes(x = reorder(`Spend Ca
     panel.grid.minor = element_blank(),  # Remove minor grid lines
     plot.background = element_rect(fill = "white", color = NA)  # Set plot background to white
   )
-
-# display the plot
-print(ws_nh_tot_neg_spcat)
 
 # saving the plot
 ggsave("ws_nh_tot_neg_spcat_deputy_Hart.pdf",
@@ -255,9 +249,6 @@ ws_nh_actual_spent_plot <- ggplot(ws_nh_actual_spent_long, aes(x = Month, y = `A
     legend.key.size = unit(5, "lines"), # Increase size of the legend key
     legend.spacing.y = unit(5, "cm")  # Add vertical spacing between legend items
   )
-
-# Display the plot
-print(ws_nh_actual_spent_plot)
 
 # saving the plot
 ggsave("ws_nh_monthly_spending_deputy_Hart.pdf", 
