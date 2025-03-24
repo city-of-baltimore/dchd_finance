@@ -72,7 +72,7 @@ all_state_fund <- allbud_vs_actuals |> filter(Fund == '5000 State Grants Fund')
 ## Creating calculations for the tables
 Creating the calculations for the tables. There will be a total of 10 tables that are from the `754 SFSP Expense Report`. 
 
-*First calculations include the Revised Budget*
+*First calculations include the Total Budget*
 *Second calculations include the GL_YTD_EXP*
 *Third calculations include the Analysis Table*
 *Fourth calculation include the Percentage Table*
@@ -80,7 +80,7 @@ Creating the calculations for the tables. There will be a total of 10 tables tha
 
 
 ### General Funds 1001 Table
-*First calculations include the Revised Budget*
+*First calculations include the Total Budget*
 Here is a for loop that will automatically configure the key words that match up with salaries and non spend categories for only the 1001 General Funds.
 
 ```{r gfloop}
@@ -113,8 +113,8 @@ for (cost_center in gf_cost_center_list) {
   cost_center_data <- all_general_fund |> filter(`Cost Center` == cost_center)
   
   # compute salary and non-salary projections
-  gf_salary_proj <- sum(as.numeric(cost_center_data$`Revised Budget`[str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
-  gf_non_salary_proj <- sum(as.numeric(cost_center_data$`Revised Budget`[!str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
+  gf_salary_proj <- sum(as.numeric(cost_center_data$`Total Budget`[str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
+  gf_non_salary_proj <- sum(as.numeric(cost_center_data$`Total Budget`[!str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
   
   # store results in a dataframe
   general_fund_results[[as.character(cost_center)]] <- data.frame(
@@ -151,8 +151,8 @@ for (cost_center in sf_cost_center_list) {
   cost_center_data <- all_state_fund |> filter(`Cost Center` == cost_center)
   
   # compute salary and non-salary projections
-  sf_salary_proj <- sum(as.numeric(cost_center_data$`Revised Budget`[str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
-  sf_non_salary_proj <- sum(as.numeric(cost_center_data$`Revised Budget`[!str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
+  sf_salary_proj <- sum(as.numeric(cost_center_data$`Total Budget`[str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
+  sf_non_salary_proj <- sum(as.numeric(cost_center_data$`Total Budget`[!str_detect(cost_center_data$`Spend Category`, salary_pattern)]), na.rm = TRUE)
   
   # store results in a dataframe
   state_fund_results[[as.character(cost_center)]] <- data.frame(
@@ -454,7 +454,7 @@ gf_glytd_comparison_data <- data.frame(
   )
 )
 
-# Step 2: sum the Revised Budget from both of the salary and non salary rows because these contain the revised budget totals
+# Step 2: sum the Total Budget from both of the salary and non salary rows because these contain the Total Budget totals
 total_projections_gf <- sum(as.numeric(gf_salary_proj), na.rm = TRUE) + 
                         sum(as.numeric(gf_non_salary_proj), na.rm = TRUE)
 
@@ -462,10 +462,10 @@ ggplot(gf_glytd_comparison_data, aes(x = Category, y = Value, fill = Category)) 
   geom_bar(stat = "identity", position = "stack") +
   geom_segment(aes(x = 1, xend = 3.5, y = total_projections_gf, yend = total_projections_gf), 
                linetype = "dashed", color = "blue", size = 1.2) +  # Dashed line before label
-  # Annotate the Revised Budget line with text
+  # Annotate the Total Budget line with text
   annotate("text", x = 3.5, y = total_projections_gf,  # Place text at the intersection of the two segments
-           label = paste("Revised Budget", label_dollar()(total_projections_gf)), 
-           color = "blue", vjust = -0.9, size = 6, fontface = "bold") + 
+           label = paste("Total Budget", label_dollar()(total_projections_gf)), 
+           color = "blue", vjust = -0.1, size = 7, fontface = "bold") + 
   scale_fill_manual(values = c("Salaries/OPC Projections" = "steelblue", 
                                "Other EXP Projections" = "darkgreen",
                                "Total Projections" = "gray")) +  # Custom colors
@@ -485,7 +485,7 @@ ggplot(gf_glytd_comparison_data, aes(x = Category, y = Value, fill = Category)) 
         axis.text.y = element_text(size = 18, face = "bold"))
 
 # save the plot
-ggsave("all_gf_glytd_comparison_data.png",width = 25, height = 18, dpi = 300)  
+ggsave("all_gf_glytd_comparison_data.png",width = 28, height = 18, dpi = 300)  
 ```
 
 
@@ -511,7 +511,7 @@ sg_glytd_comparison_data <- data.frame(
   )
 )
 
-# Step 2: sum the Revised Budget from both of the salary and non salary rows because these contain the revised budget totals
+# Step 2: sum the Total Budget from both of the salary and non salary rows because these contain the Total Budget totals
 total_projections_sg <-  sum(as.numeric(sf_salary_proj), na.rm = TRUE) + 
                         sum(as.numeric(sf_non_salary_proj), na.rm = TRUE)
 
@@ -521,10 +521,10 @@ ggplot(sg_glytd_comparison_data, aes(x = Category, y = Value, fill = Category)) 
   geom_bar(stat = "identity", position = "stack") +
   geom_segment(aes(x = 1, xend = 3.5, y = total_projections_sg, yend = total_projections_sg), 
                linetype = "dashed", color = "blue", size = 1.2) +  # Dashed line before label
-  # Annotate the Revised Budget line with text
+  # Annotate the Total Budget line with text
   annotate("text", x = 3.5, y = total_projections_sg,  # Place text at the intersection of the two segments
-           label = paste("Revised Budget", label_dollar()(total_projections_sg)), 
-           color = "blue", vjust = -0.9, size = 6, fontface = "bold") + 
+           label = paste("Total Budget", label_dollar()(total_projections_sg)), 
+           color = "blue", vjust = -0.1, size = 7, fontface = "bold") + 
   scale_fill_manual(values = c("Salaries/OPC Projections" = "steelblue", 
                                "Other EXP Projections" = "darkgreen",
                                "Total Projections" = "gray")) +  # Custom colors
@@ -545,7 +545,7 @@ ggplot(sg_glytd_comparison_data, aes(x = Category, y = Value, fill = Category)) 
 
 
 # save the plot
-ggsave("all_sg_glytd_comparison_data.png",width = 24, height = 18, dpi = 300)  
+ggsave("all_sg_glytd_comparison_data.png",width = 28, height = 18, dpi = 300)  
 ```
 
 
@@ -560,7 +560,7 @@ all_tpe_glytd_comparison_data <- data.frame(
   Category = rep(c("Salaries/OPC Projections", "Other EXP Projections", "Total Projections"), each = 2),  
   Fund = c("1001 General Grants Fund", "GL YTD EXP 1001 General Grants Fund",
            "5000 State Grants Fund", "GL YTD EXP 5000 State Grants Fund",
-           "Total Projections Revised Budget", "Total Projections General Ledger YTD"),  
+           "Total Projections Total Budget", "Total Projections General Ledger YTD"),  
   Value = c(
     tpe_rb_final_tbl$Salaries.OPC.Projections, glytd_tpe_final_tbl$Salaries.OPC.Projections,
     tpe_rb_final_tbl$Other.EXP.Projections, glytd_tpe_final_tbl$Other.EXP.Projections,
@@ -569,7 +569,7 @@ all_tpe_glytd_comparison_data <- data.frame(
 )
 
 
-# Step 2: sum the Revised Budget Correctly
+# Step 2: sum the Total Budget Correctly
 total_projections_tpe <- sum(as.numeric(tpe_rb_final_tbl$Total.Projections), na.rm = TRUE) + 
                          sum(as.numeric(glytd_tpe_final_tbl$Total.Projections), na.rm = TRUE)
 
@@ -621,7 +621,7 @@ all_pcnt_final_data <- data.frame(
 )
 
 
-# Step 2: calculate the total revised budget for the first rows defined in the dataset
+# Step 2: calculate the total Total Budget for the first rows defined in the dataset
 total_projections_sg <- sum(as.numeric(sf_salary_proj), na.rm = TRUE) + 
                         sum(as.numeric(sf_non_salary_proj), na.rm = TRUE)
 
