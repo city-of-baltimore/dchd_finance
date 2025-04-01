@@ -113,11 +113,6 @@ all_gl_data <- all_gl_data |>
 budg_vs_actuals <- budg_vs_actuals |> 
   select_if(~sum(!is.na(.)) > 0) |> 
   mutate(Grant = ifelse(Grant == "(Blank)", NA_character_, Grant))
-
-
-# only keep the rows that are for state and general fund 
-all_gl_data <- all_gl_data |> 
-  filter(Fund == "1001 General Fund"| Fund == "5000 State Grants Fund")
 ```
 
 
@@ -195,10 +190,6 @@ gl_final_report <- gl_final_report |>
             "Total Spent",
             "Adopted Budget")) |> 
 select(Service, Fund, `Cost Center`, `Spend Category`, everything())  # Reorders columns
-
-# only keep the rows that are for state and general fund 
-gl_final_report <- gl_final_report |> 
-  filter(Fund == "1001 General Fund"| Fund == "5000 State Grants Fund")
 ```
 
   
@@ -247,10 +238,6 @@ bbmr_final_data <- bbmr_final_data |>
 bbmr_final_report <- bbmr_final_data |> 
   arrange(Service, Fund, `Cost Center`, `Total Budget`) |>  # Sorts rows correctly
   select(Service, Fund, `Cost Center`, `Total Budget`, everything())  # Reorders columns
-
-# only keep the rows that are for state and general fund 
-bbmr_final_report <- bbmr_final_report |> 
-  filter(Fund == "1001 General Fund"| Fund == "5000 State Grants Fund")
 ```
 
 ####
