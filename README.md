@@ -13,13 +13,9 @@ Includes:
 
 2. GL-Operating Actual Expenses YTD - raw data from Workday
 
-3. All_service_centers_GL_and_Budget_vs_Actuals.Rmd file
+3. All_service_centers_GL_and_BBMR_table.Rmd file
 
-4. Summer_food_program_GL_and_Budget_vs_Actuals.Rmd file
-
-5. Summer_food_program_plots.Rmd file
-
-6. All_service_centers_plots.Rmd file
+4. All_service_centers_bottom_plots.Rmd file
 
 # How to use the github repository
 Clone code from github
