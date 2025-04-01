@@ -13,13 +13,9 @@ Includes:
 
 2. GL-Operating Actual Expenses YTD - raw data from Workday
 
-3. All_service_centers_GL_and_Budget_vs_Actuals.Rmd file
+3. All_service_centers_GL_and_BBMR_table.Rmd file
 
-4. Summer_food_program_GL_and_Budget_vs_Actuals.Rmd file
-
-5. Summer_food_program_plots.Rmd file
-
-6. All_service_centers_plots.Rmd file
+4. All_service_centers_bottom_plots.Rmd file
 
 # How to use the github repository
 Clone code from github
@@ -28,7 +24,7 @@ In Rstudio, go to File -> New Project -> Version Control -> git -> then add the 
 # Documentation
 There is documentation in the Documents folder on how to use github and rstudio. Within the folder are "Cheatsheets" for Rstudio on understanding Markdown files and other coding logistics. 
 
-There is a file that details how to use the Rmarkdown file for the GL_and_Budget_vs_Actuals file and there is a file that talks about how to use Github.
+There is a file that details how to use the Rmarkdown file for the All_service_centers_GL_and_BBMR_table file and there is a file that talks about how to use Github.
 
 Make sure to click on the "View Raw" to have the file be downloaded to your downloads folder to take a look at the files.  
 
@@ -37,7 +33,7 @@ This folder contains rmd files that are used to create the plots for specific de
 
   1. Cost center negative spending plot
   2. Cost center negative spending drilled down to the spend category
-  3. Total spending for the month of July
+  3. Total spending for the months - note that some months may not be represented so they will not show on the plot, current data months only. 
 
 # Summer and All Service Names Plots
 This is a rmd file that contains statcked and regular bar charts to compare the various tables under the 1001 General and 5000 State Grants data. There are 10 tables that are then made into plots for the DHCD team to replicate and show internally or to their stakeholders. The visuals are labeled and contain the Revised Budget column as a line within the plot to demonstrate which of the funds have spent over or close to their budgeted amount based on the two columns: 
