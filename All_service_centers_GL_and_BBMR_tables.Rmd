@@ -39,8 +39,8 @@ get_latest_file <- function(pattern, date_format = "%Y-%m-%d") {
 }
 
 # assigning the names of the latest files to the new variables
-gl_all_data <- basename(get_latest_file("GL-Operating Actual Expenses YTD .*\\.xlsx$"))
-budg_vs_act_file_name <- basename(get_latest_file("Budget_vs_Actuals_-_BBMR YTD .*\\.xlsx$"))
+gl_all_data <- basename(get_latest_file("GL-Operating Actual Expenses YTD.*\\.xlsx$"))
+budg_vs_act_file_name <- basename(get_latest_file("Budget_vs_Actuals_-_BBMR YTD.*\\.xlsx$"))
 
 # read data from files
 all_gl_data <- readxl::read_xlsx(here("Data", gl_all_data), 
