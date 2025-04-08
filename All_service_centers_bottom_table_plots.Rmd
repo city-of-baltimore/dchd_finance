@@ -8,8 +8,6 @@ output: html_document
 # Project Overview
 This markdown file will use the DHCD Finance dept data to calculate the columns that are provided from the `754 SFSP Expense Report`. There will be a series of plots to make the tables at the bottom of the report more appealing for what is being shown. This will be done through visuals.
 
-*Note: This rmd file contains all of the cost centers not just the summer food program. The numbers will be a lot larger than the summer food program plots file.*
-
 *Using `Control + Alt + R` will run the whole script in under 10 seconds. Pressing the `Run` button and selecting `Run All` will do the same* 
 
 ```{r libraries, warning=FALSE, message=TRUE}
@@ -48,9 +46,9 @@ allbud_vs_actuals <- read.xlsx(latest_allbud_vs_actuals_file)
 # Set the first row as headers and remove it from the data
 allbud_vs_actuals <- setNames(allbud_vs_actuals[-1, ], as.character(unlist(allbud_vs_actuals[1, ]))) 
 
-# remove unwanted columns 
-allbud_vs_actuals <- allbud_vs_actuals |> 
-  select(-c(19,20))
+# # remove unwanted columns 
+# allbud_vs_actuals <- allbud_vs_actuals |> 
+#   select(-c(19,20))
 
 # Output the first few rows to verify
 print(head(allbud_vs_actuals))
