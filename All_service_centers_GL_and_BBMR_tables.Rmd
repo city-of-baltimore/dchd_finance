@@ -135,7 +135,6 @@ month_dates <- as.Date(paste0(month_years, "-01"))
 get_first_date <- min(month_dates, na.rm = TRUE)
 all_year_months <- seq(get_first_date, get_first_date + months(11), by = "month")
 
-
 # --- placeholders for the missing months ---
 # add missing months into the table
 for (col in paste0("Actuals_", all_year_months)) {
@@ -354,9 +353,12 @@ latest_year <- all_gl_data |>
   year()
 
 # Extract the current system date
-current_date <- Sys.Date()
+current_date <- Sys.Date() - 1
 current_year <- year(current_date)
-current_month <- month(current_date)
+current_month <- month(current_date) -1
+
+previous_month_date <- current_date %m-% months(1)
+month_name_forend <- month.name[month(previous_month_date)]
 
 # Determine the fiscal year
 if (current_month >= 7) {
@@ -368,7 +370,7 @@ if (current_month >= 7) {
 # --- Create a Workbook ---
 
 # Format the title header 
-title_header <- paste0("FY ", fiscal_year, " Budget and Actual as of ", latest_month_name, " ", latest_year)
+title_header <- paste0("FY ", fiscal_year, " Budget and Actual as of ", month_name_forend, " ", latest_year)
 
 # Create the workbook
 wb1 <- createWorkbook()
@@ -462,36 +464,10 @@ saveWorkbook(wb2, "all_analysis_tbl.xlsx", overwrite = TRUE)
 Styling for the 3 wb or BBMR table.
 
 ```{r stylingforwb3}
-# --- Get the current system date when this was run ---
-current_date <- Sys.Date()
-
-# Extract the latest month from the available data
-latest_month <- all_gl_data |> 
-  filter(!is.na(expend_month)) |>      # Ensure we only consider filled-out data
-  summarize(latest_date = max(expend_month, na.rm = TRUE)) |> 
-  pull(latest_date) |> 
-  month()
-
-latest_month_name <- month.name[latest_month]
-
-# Extract year of the latest date
-latest_year <- all_gl_data |> 
-  filter(!is.na(expend_month)) |> 
-  summarize(latest_date = max(expend_month, na.rm = TRUE)) |> 
-  pull(latest_date) |> 
-  year()
-
-# Determine the fiscal year
-if (current_month >= 7) {
-  fiscal_year <- as.numeric(current_year) + 1
-} else {
-  fiscal_year <- as.numeric(current_year)
-}
-
 # --- Create a Workbook ---
 
 # Format the title header with detected month and fiscal year
-title_header <- paste0("FY ", fiscal_year, " Budget and Actual as of ", latest_month_name, " ", latest_year)
+title_header <- paste0("FY ", fiscal_year, " Budget and Actual as of ", month_name_forend, " ", latest_year)
 
 # Create the workbook
 wb3 <- createWorkbook()
@@ -536,7 +512,7 @@ saveWorkbook(wb3, "all_service_center_report_BBMR.xlsx", overwrite = TRUE)
 
 # saving the workbook
 # the file will automatically assign a date to the workbook
-saveWorkbook(wb3, paste0("FY ", fiscal_year, " BBMR All Services Budget and Actual as of ", latest_month_name, " ", latest_year, ".xlsx"), overwrite = TRUE)
+saveWorkbook(wb3, paste0("FY ", fiscal_year, " BBMR All Services Budget and Actual as of ", month_name_forend, " ", latest_year, ".xlsx"), overwrite = TRUE)
 ```
 
 
@@ -563,7 +539,7 @@ header_style_analysis <- createStyle(halign = "center", valign = "center", textD
 # --- write the first table (gl_final_report) with title and formatting ---
 
 # add title for the first table
-writeData(all_wb_combined, "tables_unite", "All Service Centers Report GL", startRow = 1, startCol = 1)
+writeData(all_wb_combined, "tables_unite", paste("All Service Centers Report GL as of", month_name_forend), startRow = 1, startCol = 1)
 mergeCells(all_wb_combined, "tables_unite", cols = 1:ncol(gl_final_report), rows = 1)
 addStyle(all_wb_combined, "tables_unite", title_style_summer, rows = 1, cols = 1:ncol(gl_final_report), gridExpand = TRUE)
 
@@ -600,7 +576,7 @@ addStyle(all_wb_combined, "tables_unite", header_style_analysis, rows = 2, cols 
 
 # saving the workbook
 # the file will automatically assign a date to the workbook
-saveWorkbook(all_wb_combined, paste0("FY ", fiscal_year, " All Services Budget and Actual as of ", latest_month_name, " ", latest_year, ".xlsx"), overwrite = TRUE)
+saveWorkbook(all_wb_combined, paste0("FY ", fiscal_year, " All Services Budget and Actual as of ", month_name_forend, " ", latest_year, ".xlsx"), overwrite = TRUE)
 ```
 
 #### YOU DID IT ####
