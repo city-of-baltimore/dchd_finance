@@ -48,6 +48,8 @@ This is a rmd file that is used to make the Capital automated budget report for 
 
 There is a file called Capital_budget.rmd that the team will use to complete their capital budget reports.
 
+Documentation for the Capital Budget script is located in the Documentation Folder.
+
 
 
 
