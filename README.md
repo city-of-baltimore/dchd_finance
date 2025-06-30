@@ -44,7 +44,9 @@ This is a rmd file that contains stacked and regular bar charts to compare the v
 2. Other EXP Projections.
 
 # Capital Budget Script
-This is a rmd file that is used to make the Capital automated budget report for the Capital team within DHCD Finance. 
+This is a rmd file that is used to make the Capital automated budget report for the Capital team within DHCD Finance. MORE UPDATES TO COME!
+
+There is a file called Capital_budget.rmd that the team will use to complete their capital budget reports.
 
 
 
