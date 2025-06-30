@@ -17,7 +17,7 @@ Includes:
 
 4. All_service_centers_bottom_plots.Rmd file
    
-5. Capital Budget 
+5. Capital_budget.Rmd file 
 
 # How to use the github repository
 Clone code from github
@@ -38,10 +38,13 @@ This folder contains rmd files that are used to create the plots for specific de
   3. Total spending for the months - note that some months may not be represented so they will not show on the plot, current data months only. 
 
 # All Service Names Plots
-This is a rmd file that contains statcked and regular bar charts to compare the various tables under the 1001 General and 5000 State Grants data. There are 10 tables that are then made into plots for the DHCD team to replicate and show internally or to their stakeholders. The visuals are labeled and contain the Revised Budget column as a line within the plot to demonstrate which of the funds have spent over or close to their budgeted amount based on the two columns: 
+This is a rmd file that contains stacked and regular bar charts to compare the various tables under the 1001 General and 5000 State Grants data. There are 10 tables that are then made into plots for the DHCD team to replicate and show internally or to their stakeholders. The visuals are labeled and contain the Revised Budget column as a line within the plot to demonstrate which of the funds have spent over or close to their budgeted amount based on the two columns: 
 
 1. Salaries/OPC Projections, and
 2. Other EXP Projections.
+
+# Capital Budget Script
+This is a rmd file that is used to make the Capital automated budget report for the Capital team within DHCD Finance. 
 
 
 
