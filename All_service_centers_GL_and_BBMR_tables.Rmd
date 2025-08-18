@@ -155,9 +155,10 @@ all_expense_report_tbl <- budg_vs_actuals |>
 # Rename columns to the "Month Year" format (e.g., "June 2024")
 all_expense_report_tbl <- all_expense_report_tbl |> 
   rename_with(
-  ~ as.character(month(as.Date(gsub("Actuals_","", .x)), label = T, abbr = F)),
-  starts_with("Actuals_")
-)
+    ~ format(as.Date(gsub("Actuals_", "", .x)), "%B %Y"),
+    starts_with("Actuals_")
+  )
+
 ```
 
 ###
