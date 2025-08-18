@@ -44,7 +44,7 @@ budg_vs_act_file_name <- basename(get_latest_file("Budget_vs_Actuals_-_BBMR YTD.
 
 # read data from files
 all_gl_data <- readxl::read_xlsx(here("Data", gl_all_data), 
-                             skip = 13,
+                             skip = 14,
                              col_types = c(rep("text",2),   
                                            "date", 
                                            rep("text",6),
