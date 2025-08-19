@@ -23,7 +23,8 @@ library(lubridate)
 ## Reading in the data 
 Reading in the files for the data that will be used. Put new data files in the "Data" folder and the script will automatically detect the latest file within the Data folder.
 
-```{r data}
+```{r data, warning=FALSE,message=FALSE}
+# Function to get the latest file
 get_latest_file <- function(pattern, date_format = "%Y-%m-%d") {
   files <- list.files(path = "Data", pattern = pattern, full.names = TRUE)
   
@@ -34,23 +35,32 @@ get_latest_file <- function(pattern, date_format = "%Y-%m-%d") {
   
   # Get the file with the latest date
   latest_file <- files[which.max(file_dates)]
-  
   return(latest_file)
 }
 
-# assigning the names of the latest files to the new variables
+# Assigning the names of the latest files
 gl_all_data <- basename(get_latest_file("GL-Operating Actual Expenses YTD.*\\.xlsx$"))
 budg_vs_act_file_name <- basename(get_latest_file("Budget_vs_Actuals_-_BBMR YTD.*\\.xlsx$"))
 
-# read data from files
-all_gl_data <- readxl::read_xlsx(here("Data", gl_all_data), 
-                             skip = 14,
-                             col_types = c(rep("text",2),   
-                                           "date", 
-                                           rep("text",6),
-                                           rep("numeric", 3),
-                                           rep("text",26))) |> 
+# Step 1: preview first 50 rows
+preview <- readxl::read_xlsx(here("Data", gl_all_data), n_max = 50, col_names = FALSE)
+
+# Find the row that contains "Journal Number"
+header_row <- which(apply(preview, 1, function(row) {
+  any(grepl("Journal Number", row, ignore.case = TRUE))
+}))[1]
+
+# Read the file starting at that row
+all_gl_data <- readxl::read_xlsx(
+  here("Data", gl_all_data),
+  skip = header_row - 1,
+  col_names = TRUE
+)
+
+# Ensure Accounting Date column is proper Date
+all_gl_data <- all_gl_data %>%
   mutate(`Accounting Date` = as.Date(`Accounting Date`))
+
 
 # the first row of the data file is mostly empty except for a few important dates. 
 # read those data and do some formatting to clean up the data
